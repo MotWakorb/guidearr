@@ -5,17 +5,17 @@ on:
     branches:
       - main
     paths:
-      - 'guidearr/app.py'
-      - 'guidearr/requirements.txt'
-      - 'guidearr/Dockerfile'
+      - 'app.py'
+      - 'requirements.txt'
+      - 'Dockerfile'
       - '.github/workflows/docker-build.yml'
   pull_request:
     branches:
       - main
     paths:
-      - 'guidearr/app.py'
-      - 'guidearr/requirements.txt'
-      - 'guidearr/Dockerfile'
+      - 'app.py'
+      - 'requirements.txt'
+      - 'Dockerfile'
   workflow_dispatch:
 
 env:
@@ -60,7 +60,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./guidearr
+          context: .
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
