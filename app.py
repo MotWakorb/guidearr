@@ -1325,7 +1325,7 @@ def print_guide():
                     else:
                         number = 'N/A'
 
-                    name = channel.get('name', 'Unknown')
+                    name = clean_channel_name(channel.get('name', 'Unknown'))
                     groups_html += f"                <div class='channel-line' data-group='{group_name}'><span class='ch-num'>{number}</span> {name}</div>\n"
 
                 groups_html += "            </div>\n        </div>\n"
