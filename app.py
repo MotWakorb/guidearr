@@ -351,6 +351,7 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                 --table-header-bg: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
                 --border-color: #0f3460;
                 --hover-bg: #1565c0;
+                --logo-bg: #1a1a2e;
             }}
 
             body.light-mode {{
@@ -366,6 +367,7 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                 --table-header-bg: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
                 --border-color: #e0e0e0;
                 --hover-bg: #e3f2fd;
+                --logo-bg: #e0e0e0;
             }}
 
             body {{
@@ -487,11 +489,12 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
 
             .channel-logo-cell {{
                 text-align: center;
-                background: #1a1a2e;
+                background: var(--logo-bg);
                 border-radius: 6px;
                 height: 70px;
                 vertical-align: middle;
                 padding: 10px !important;
+                transition: background 0.3s ease;
             }}
 
             .channel-logo {{
