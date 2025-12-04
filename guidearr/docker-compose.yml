@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  guidearr:
+    build: .
+    container_name: guidearr
+    restart: unless-stopped
+    ports:
+      - "9198:5000"
+    environment:
+      # Dispatcharr API Configuration
+      - DISPATCHARR_BASE_URL=${DISPATCHARR_BASE_URL:-http://172.16.0.91:9191}
+      - DISPATCHARR_USERNAME=${DISPATCHARR_USERNAME}
+      - DISPATCHARR_PASSWORD=${DISPATCHARR_PASSWORD}
+
+      # Optional: Filter to specific channel profile
+      - CHANNEL_PROFILE_NAME=${CHANNEL_PROFILE_NAME:-}
+
+      # Optional: Exclude channel groups (comma-separated)
+      - EXCLUDE_CHANNEL_GROUPS=${EXCLUDE_CHANNEL_GROUPS:-}
+
+      # Optional: Customize page title
+      - PAGE_TITLE=${PAGE_TITLE:-TV Channel Guide}
+
+      # Cache refresh schedule (cron format)
+      - CACHE_REFRESH_CRON=${CACHE_REFRESH_CRON:-0 */6 * * *}
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
