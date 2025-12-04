@@ -443,15 +443,15 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
             }}
 
             .channels-table thead th {{
-                padding: 15px;
+                padding: 12px 15px;
                 text-align: left;
                 font-weight: 600;
                 color: #ffffff;
-                font-size: 0.95em;
+                font-size: 0.9em;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
                 position: sticky;
-                top: 69px;
+                top: 63px;
                 z-index: 50;
                 background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
                 box-shadow: 0 2px 4px rgba(0,0,0,0.2);
