@@ -418,7 +418,7 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                 font-weight: 600;
                 color: var(--text-primary);
                 margin: 0;
-                padding: 20px 30px;
+                padding: 15px 30px;
                 border-bottom: 3px solid var(--border-color);
                 border-radius: 12px 12px 0 0;
                 position: sticky;
@@ -451,7 +451,7 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
                 position: sticky;
-                top: 83px;
+                top: 69px;
                 z-index: 50;
                 background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
                 box-shadow: 0 2px 4px rgba(0,0,0,0.2);
