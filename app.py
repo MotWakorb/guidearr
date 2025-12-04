@@ -451,9 +451,10 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
                 position: sticky;
-                top: 76px;
+                top: 83px;
                 z-index: 50;
-                background: var(--table-header-bg);
+                background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
             }}
 
             .channels-table thead th:first-child {{
@@ -462,6 +463,10 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
 
             .channels-table thead th:nth-child(2) {{
                 width: 120px;
+            }}
+
+            body.light-mode .channels-table thead th {{
+                background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
             }}
 
             .channels-table tbody tr {{
