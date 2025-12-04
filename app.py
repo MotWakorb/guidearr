@@ -338,65 +338,99 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                 box-sizing: border-box;
             }}
 
+            :root {{
+                --bg-primary: #1a1a2e;
+                --bg-secondary: #16213e;
+                --bg-tertiary: #0f3460;
+                --text-primary: #e8e8e8;
+                --text-secondary: #9aa5ce;
+                --text-tertiary: #7a8aa5;
+                --accent-gradient-1: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
+                --accent-gradient-2: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                --table-bg: #0f3460;
+                --table-header-bg: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
+                --border-color: #0f3460;
+                --hover-bg: #1565c0;
+            }}
+
+            body.light-mode {{
+                --bg-primary: #f5f5f5;
+                --bg-secondary: #ffffff;
+                --bg-tertiary: #e0e0e0;
+                --text-primary: #212121;
+                --text-secondary: #424242;
+                --text-tertiary: #616161;
+                --accent-gradient-1: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+                --accent-gradient-2: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                --table-bg: #fafafa;
+                --table-header-bg: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+                --border-color: #e0e0e0;
+                --hover-bg: #e3f2fd;
+            }}
+
             body {{
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-                background: #1a1a2e;
-                color: #e8e8e8;
+                background: var(--bg-primary);
+                color: var(--text-primary);
                 min-height: 100vh;
                 padding: 20px;
+                transition: background-color 0.3s ease, color 0.3s ease;
             }}
 
             .header {{
                 text-align: center;
                 margin-bottom: 40px;
                 padding: 30px;
-                background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
+                background: var(--accent-gradient-1);
                 border-radius: 12px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+                transition: background 0.3s ease;
             }}
 
             .header h1 {{
                 font-size: 2.5em;
                 font-weight: 700;
-                color: #ffffff;
+                color: var(--text-primary);
                 margin-bottom: 10px;
-                text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+                text-shadow: none;
             }}
 
             .header .channel-count {{
                 font-size: 1.1em;
-                color: #9aa5ce;
+                color: var(--text-secondary);
                 font-weight: 300;
             }}
 
             .channel-group {{
-                background: #16213e;
+                background: var(--bg-secondary);
                 border-radius: 12px;
                 padding: 30px;
                 margin-bottom: 30px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+                transition: background 0.3s ease;
             }}
 
             .group-title {{
                 font-size: 1.8em;
                 font-weight: 600;
-                color: #ffffff;
+                color: var(--text-primary);
                 margin-bottom: 20px;
                 padding-bottom: 10px;
-                border-bottom: 3px solid #0f3460;
+                border-bottom: 3px solid var(--border-color);
             }}
 
             .channels-table {{
                 width: 100%;
                 border-collapse: collapse;
-                background: #0f3460;
+                background: var(--table-bg);
                 border-radius: 8px;
                 overflow: hidden;
                 table-layout: fixed;
+                transition: background 0.3s ease;
             }}
 
             .channels-table thead {{
-                background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
+                background: var(--table-header-bg);
             }}
 
             .channels-table thead th {{
@@ -470,7 +504,7 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
 
             .channel-name {{
                 font-size: 1.05em;
-                color: #e8e8e8;
+                color: var(--text-primary);
                 font-weight: 500;
             }}
 
@@ -478,14 +512,36 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                 text-align: center;
                 margin-top: 40px;
                 padding: 20px;
-                color: #9aa5ce;
+                color: var(--text-secondary);
                 font-size: 0.9em;
             }}
 
             .footer .cache-info {{
                 margin-top: 10px;
                 font-size: 0.85em;
-                color: #7a8aa5;
+                color: var(--text-tertiary);
+            }}
+
+            .theme-toggle {{
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: var(--bg-secondary);
+                border: 2px solid var(--border-color);
+                color: var(--text-primary);
+                padding: 10px 20px;
+                border-radius: 50px;
+                font-size: 1em;
+                font-weight: 600;
+                cursor: pointer;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                transition: all 0.3s ease;
+                z-index: 1001;
+            }}
+
+            .theme-toggle:hover {{
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(0,0,0,0.3);
             }}
 
             .print-button {{
@@ -523,7 +579,7 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
             }}
 
             .modal-content {{
-                background: #16213e;
+                background: var(--bg-secondary);
                 margin: 5% auto;
                 padding: 30px;
                 border-radius: 12px;
@@ -533,6 +589,7 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                 overflow-y: auto;
                 box-shadow: 0 10px 50px rgba(0,0,0,0.5);
                 animation: slideIn 0.3s;
+                transition: background 0.3s ease;
             }}
 
             @keyframes fadeIn {{
@@ -555,12 +612,12 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
             }}
 
             .modal-header h2 {{
-                color: #ffffff;
+                color: var(--text-primary);
                 margin: 0;
             }}
 
             .close {{
-                color: #9aa5ce;
+                color: var(--text-secondary);
                 font-size: 28px;
                 font-weight: bold;
                 cursor: pointer;
@@ -568,21 +625,21 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
             }}
 
             .close:hover {{
-                color: #ffffff;
+                color: var(--text-primary);
             }}
 
             .group-checkbox {{
                 display: block;
                 padding: 12px;
                 margin: 8px 0;
-                background: #0f3460;
+                background: var(--table-bg);
                 border-radius: 8px;
                 cursor: pointer;
                 transition: background 0.2s;
             }}
 
             .group-checkbox:hover {{
-                background: #1565c0;
+                background: var(--hover-bg);
             }}
 
             .group-checkbox input {{
@@ -592,7 +649,7 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
 
             .group-checkbox label {{
                 cursor: pointer;
-                color: #e8e8e8;
+                color: var(--text-primary);
             }}
 
             .modal-buttons {{
@@ -806,6 +863,9 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
         </style>
     </head>
     <body>
+        <!-- Theme Toggle Button -->
+        <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark / ☀️ Light</button>
+
         <div class="header">
             <h1>{PAGE_TITLE}</h1>
             <p class="channel-count">{len(sorted_channels)} channels available</p>
@@ -977,6 +1037,25 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                     closePrintDialog();
                 }}
             }}
+
+            // Theme toggle function
+            function toggleTheme() {{
+                document.body.classList.toggle('light-mode');
+                // Save theme preference to localStorage
+                if (document.body.classList.contains('light-mode')) {{
+                    localStorage.setItem('theme', 'light');
+                }} else {{
+                    localStorage.setItem('theme', 'dark');
+                }}
+            }}
+
+            // Load saved theme preference on page load
+            window.addEventListener('DOMContentLoaded', function() {{
+                const savedTheme = localStorage.getItem('theme');
+                if (savedTheme === 'light') {{
+                    document.body.classList.add('light-mode');
+                }}
+            }});
         </script>
     </body>
     </html>
@@ -1381,6 +1460,14 @@ def print_guide():
 
 {groups_html}
 
+<script>
+    // Automatically trigger print dialog when page loads
+    window.addEventListener('load', function() {{
+        setTimeout(function() {{
+            window.print();
+        }}, 500); // Small delay to ensure page is fully rendered
+    }});
+</script>
 </body>
 </html>"""
 
