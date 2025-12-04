@@ -451,7 +451,7 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
                 position: sticky;
-                top: 63px;
+                top: 0;
                 z-index: 50;
                 background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
                 box-shadow: 0 2px 4px rgba(0,0,0,0.2);

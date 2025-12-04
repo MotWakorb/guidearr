@@ -1,0 +1,14 @@
+services:
+  guidearr-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: guidearr-dev
+    restart: unless-stopped
+    ports:
+      - "9199:5000"
+    env_file:
+      - .env
+    environment:
+      # Override any env vars here if needed
+      - PAGE_TITLE=TV Channel Guide (DEV)
