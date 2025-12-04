@@ -305,7 +305,7 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                     <thead>
                         <tr>
                             <th>Channel</th>
-                            <th>Logo</th>
+                            <th></th>
                             <th>Name</th>
                         </tr>
                     </thead>
@@ -406,26 +406,33 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
             .channel-group {{
                 background: var(--bg-secondary);
                 border-radius: 12px;
-                padding: 30px;
+                padding: 0;
                 margin-bottom: 30px;
                 box-shadow: 0 10px 30px rgba(0,0,0,0.2);
                 transition: background 0.3s ease;
+                overflow: visible;
             }}
 
             .group-title {{
                 font-size: 1.8em;
                 font-weight: 600;
                 color: var(--text-primary);
-                margin-bottom: 20px;
-                padding-bottom: 10px;
+                margin: 0;
+                padding: 20px 30px;
                 border-bottom: 3px solid var(--border-color);
+                border-radius: 12px 12px 0 0;
+                position: sticky;
+                top: 0;
+                background: var(--bg-secondary);
+                z-index: 100;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             }}
 
             .channels-table {{
                 width: 100%;
                 border-collapse: collapse;
                 background: var(--table-bg);
-                border-radius: 8px;
+                border-radius: 0 0 12px 12px;
                 overflow: hidden;
                 table-layout: fixed;
                 transition: background 0.3s ease;
@@ -443,6 +450,10 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                 font-size: 0.95em;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
+                position: sticky;
+                top: 76px;
+                z-index: 50;
+                background: var(--table-header-bg);
             }}
 
             .channels-table thead th:first-child {{
