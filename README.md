@@ -4,10 +4,10 @@ A beautiful, web-based TV channel guide generator that pulls data from your Disp
 
 ## Features
 
-- 🎨 **Colorful Design**: Each channel group gets its own color scheme with matching light backgrounds
+- 🎨 **Dark/Light Mode**: Toggle between dark and light themes with persistent preference
 - 📄 **Dual Print Modes**: Choose between detailed (all channels) or summary (channel ranges) per group
+- 🖨️ **Auto-Print Dialog**: Automatically opens print dialog when generating printable guides
 - 🔄 **Smart Caching**: Configurable refresh schedule to minimize API calls
-- 🖨️ **Print-Optimized**: Generates clean, professional guides optimized for 8.5" x 11" landscape
 - 🎯 **Flexible Filtering**: Select which channel groups to include and exclude
 - 🌈 **Continuation Headers**: Automatic headers when groups span across columns
 - 🏃 **Multi-Architecture**: Supports both AMD64 and ARM64 platforms
@@ -16,48 +16,67 @@ A beautiful, web-based TV channel guide generator that pulls data from your Disp
 
 ## Quick Start
 
+### Using Docker Run (Simplest)
+
+```bash
+docker run -d \
+  --name guidearr \
+  -p 9198:5000 \
+  -e DISPATCHARR_BASE_URL=http://your-dispatcharr:9191 \
+  -e DISPATCHARR_USERNAME=your-username \
+  -e DISPATCHARR_PASSWORD=your-password \
+  ghcr.io/motwakorb/guidearr:latest
+```
+
+Then access the channel guide at `http://localhost:9198`
+
 ### Using Docker Compose (Recommended)
 
-1. **Clone the repository** (or copy the files to your server)
+1. **Create a `docker-compose.yml` file**:
 
-2. **Create a `.env` file** from the example:
-   ```bash
-   cp .env.example .env
-   ```
+```yaml
+version: '3.8'
 
-3. **Edit the `.env` file** with your Dispatcharr credentials:
-   ```bash
-   DISPATCHARR_BASE_URL=http://your-dispatcharr:9191
-   DISPATCHARR_USERNAME=your-username
-   DISPATCHARR_PASSWORD=your-password
-   ```
+services:
+  guidearr:
+    image: ghcr.io/motwakorb/guidearr:latest
+    container_name: guidearr
+    restart: unless-stopped
+    ports:
+      - "9198:5000"
+    environment:
+      # Required: Dispatcharr API Configuration
+      - DISPATCHARR_BASE_URL=http://your-dispatcharr:9191
+      - DISPATCHARR_USERNAME=your-username
+      - DISPATCHARR_PASSWORD=your-password
 
-4. **Start the container**:
-   ```bash
-   docker-compose up -d
-   ```
+      # Optional: Filter to specific channel profile
+      - CHANNEL_PROFILE_NAME=
 
-5. **Access the channel guide** at `http://localhost:9198`
+      # Optional: Exclude channel groups (comma-separated)
+      - EXCLUDE_CHANNEL_GROUPS=
 
-### Using Pre-built Container from GitHub Container Registry
+      # Optional: Customize page title
+      - PAGE_TITLE=TV Channel Guide
 
-If you want to use the pre-built container instead of building it yourself:
+      # Optional: Cache refresh schedule (cron format)
+      - CACHE_REFRESH_CRON=0 */6 * * *
 
-1. **Pull the container**:
-   ```bash
-   docker pull ghcr.io/motwakorb/guidearr:latest
-   ```
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+```
 
-2. **Run the container**:
-   ```bash
-   docker run -d \
-     --name guidearr \
-     -p 9198:5000 \
-     -e DISPATCHARR_BASE_URL=http://your-dispatcharr:9191 \
-     -e DISPATCHARR_USERNAME=your-username \
-     -e DISPATCHARR_PASSWORD=your-password \
-     ghcr.io/motwakorb/guidearr:latest
-   ```
+2. **Start the container**:
+
+```bash
+docker-compose up -d
+```
+
+3. **Access the channel guide** at `http://localhost:9198`
 
 ## Environment Variables
 
@@ -71,157 +90,59 @@ If you want to use the pre-built container instead of building it yourself:
 | `PAGE_TITLE` | No | `TV Channel Guide` | Custom title for the HTML page |
 | `CACHE_REFRESH_CRON` | No | `0 */6 * * *` | Cron expression for cache refresh schedule (minute hour day month day_of_week) |
 
-### Examples
+### Configuration Examples
 
 **Filter to "Family Friendly" profile:**
-```env
-CHANNEL_PROFILE_NAME=Family Friendly
+```yaml
+- CHANNEL_PROFILE_NAME=Family Friendly
 ```
 
 **Exclude specific channel groups:**
-```env
-EXCLUDE_CHANNEL_GROUPS=Adult Content,Premium Sports
+```yaml
+- EXCLUDE_CHANNEL_GROUPS=Adult Content,Premium Sports
 ```
 
 **Custom page title:**
-```env
-PAGE_TITLE=Smith Family TV Channels
+```yaml
+- PAGE_TITLE=Smith Family TV Channels
 ```
 
 **Custom cache refresh schedule:**
-```env
+```yaml
 # Refresh every 4 hours
-CACHE_REFRESH_CRON=0 */4 * * *
+- CACHE_REFRESH_CRON=0 */4 * * *
 
 # Refresh daily at 3 AM
-CACHE_REFRESH_CRON=0 3 * * *
+- CACHE_REFRESH_CRON=0 3 * * *
 
 # Refresh every 30 minutes
-CACHE_REFRESH_CRON=*/30 * * * *
+- CACHE_REFRESH_CRON=*/30 * * * *
 ```
 
-## GitHub Setup and Automated Builds
+## Using the Application
 
-### Prerequisites
+### Main Guide Interface
 
-1. A GitHub account
-2. Git installed on your local machine
+- **View Channels**: Browse all your channels organized by groups
+- **Theme Toggle**: Click the "🌙 Dark / ☀️ Light" button in the top-right to switch themes
+- **Printable Guide**: Click "📄 Printable Guide" to select which groups to print
 
-### Initial Repository Setup
+### Creating Printable Guides
 
-1. **Create a new repository on GitHub**:
-   - Go to https://github.com/new
-   - Name it (e.g., `homelab` or `dispatcharr-channel-guide`)
-   - Make it public or private (your choice)
-   - Don't initialize with README (you already have files)
-   - Click "Create repository"
+1. Click the "📄 Printable Guide" button
+2. Select which channel groups to include
+3. Choose "Detailed" (all channels) or "Summary" (channel range) for each group
+4. Click "Print Selected"
+5. The print dialog will automatically open in a new window
+6. Print or save as PDF
 
-2. **Push your code to GitHub** (if not already done):
-   ```bash
-   cd /Users/lecaptainc/Code/homelab
+### Available Endpoints
 
-   # Initialize git if not already done
-   git init
-   git add .
-   git commit -m "Add Dispatcharr Channel Guide application"
+- **Main page**: `http://localhost:9198`
+- **Health check**: `http://localhost:9198/health`
+- **Manual refresh**: `http://localhost:9198/refresh` (forces immediate cache refresh)
 
-   # Add your GitHub repository as remote
-   git remote add origin https://github.com/YOUR-USERNAME/YOUR-REPO-NAME.git
-
-   # Push to GitHub
-   git branch -M main
-   git push -u origin main
-   ```
-
-### Enable GitHub Container Registry
-
-1. **Enable GitHub Packages** (if not already enabled):
-   - Go to your GitHub repository settings
-   - Navigate to "Actions" → "General"
-   - Under "Workflow permissions", select "Read and write permissions"
-   - Check "Allow GitHub Actions to create and approve pull requests"
-   - Click "Save"
-
-2. **The GitHub Actions workflow will automatically**:
-   - Build the Docker container on every push to `main` branch
-   - Build for both AMD64 and ARM64 architectures
-   - Push the image to GitHub Container Registry (ghcr.io)
-   - Tag with `latest` and the git SHA
-
-### Using the Auto-built Container
-
-After your first commit is pushed and the GitHub Action completes:
-
-1. **The container will be available at**:
-   ```
-   ghcr.io/YOUR-GITHUB-USERNAME/guidearr:latest
-   ```
-
-2. **Update your `docker-compose.yml`** to use the pre-built image:
-   ```yaml
-   version: '3.8'
-
-   services:
-     guidearr:
-       image: ghcr.io/YOUR-GITHUB-USERNAME/guidearr:latest
-       # Remove the 'build: .' line
-       container_name: guidearr
-       restart: unless-stopped
-       ports:
-         - "9198:5000"
-       environment:
-         # ... rest of your environment variables
-   ```
-
-3. **Pull and run**:
-   ```bash
-   docker-compose pull
-   docker-compose up -d
-   ```
-
-### Viewing Build Status
-
-- **Check GitHub Actions**: Go to your repository → "Actions" tab
-- **View logs**: Click on any workflow run to see build logs
-- **View packages**: Go to your GitHub profile → "Packages" to see published containers
-
-### Manual Trigger
-
-You can manually trigger a build from GitHub:
-1. Go to repository → "Actions" tab
-2. Select "Build and Push Docker Image" workflow
-3. Click "Run workflow" button
-4. Select branch and click "Run workflow"
-
-## Building Locally
-
-If you want to build the container locally instead of using the pre-built one:
-
-```bash
-cd /Users/lecaptainc/Code/homelab/powershell
-
-# Build the container
-docker build -t dispatcharr-channel-guide .
-
-# Run it
-docker run -d \
-  --name dispatcharr-channel-guide \
-  -p 9198:5000 \
-  -e DISPATCHARR_BASE_URL=http://your-dispatcharr:9191 \
-  -e DISPATCHARR_USERNAME=your-username \
-  -e DISPATCHARR_PASSWORD=your-password \
-  dispatcharr-channel-guide
-```
-
-## Accessing the Channel Guide
-
-Once the container is running:
-
-- **Main page**: http://localhost:9198
-- **Health check**: http://localhost:9198/health
-- **Manual refresh**: http://localhost:9198/refresh (forces immediate cache refresh)
-
-### How Caching Works
+## How Caching Works
 
 The application uses smart caching to provide instant page loads:
 
@@ -235,27 +156,20 @@ The health endpoint (`/health`) shows:
 - When it was last updated
 - Any errors that occurred during refresh
 
-If you're running on a different port (e.g., 8080), change the port mapping in `docker-compose.yml`:
-```yaml
-ports:
-  - "8080:5000"
-```
-
 ## Updating the Container
 
-### Using Pre-built Image
-
 ```bash
+# Pull the latest version
+docker pull ghcr.io/motwakorb/guidearr:latest
+
+# If using docker-compose
 docker-compose pull
 docker-compose up -d
-```
 
-### Rebuilding Locally
-
-```bash
-docker-compose down
-docker-compose build
-docker-compose up -d
+# If using docker run, stop and remove the old container first
+docker stop guidearr
+docker rm guidearr
+# Then run the docker run command again with the latest image
 ```
 
 ## Troubleshooting
@@ -264,12 +178,7 @@ docker-compose up -d
 
 Check the logs:
 ```bash
-docker-compose logs -f dispatcharr-channel-guide
-```
-
-Or for standalone container:
-```bash
-docker logs dispatcharr-channel-guide
+docker logs guidearr
 ```
 
 ### Authentication Errors
@@ -283,12 +192,7 @@ docker logs dispatcharr-channel-guide
 - Check that your Dispatcharr instance has channels configured
 - Verify network connectivity between the container and Dispatcharr
 - Review container logs for error messages
-
-### GitHub Actions Build Failing
-
-- Check the "Actions" tab in your GitHub repository for error details
-- Ensure you have "Read and write permissions" enabled for workflows
-- Verify the `docker-build.yml` file is in `.github/workflows/` directory
+- Visit `/health` endpoint to check cache status
 
 ### Using with Nginx Reverse Proxy
 
@@ -320,7 +224,7 @@ version: '3.8'
 
 services:
   kids-channels:
-    image: ghcr.io/YOUR-USERNAME/dispatcharr-channel-guide:latest
+    image: ghcr.io/motwakorb/guidearr:latest
     ports:
       - "9198:5000"
     environment:
@@ -331,7 +235,7 @@ services:
       - PAGE_TITLE=Kids Channels
 
   sports-channels:
-    image: ghcr.io/YOUR-USERNAME/dispatcharr-channel-guide:latest
+    image: ghcr.io/motwakorb/guidearr:latest
     ports:
       - "9199:5000"
     environment:
@@ -342,23 +246,29 @@ services:
       - PAGE_TITLE=Sports Channels
 ```
 
-### Custom Styling
+### Different Port
 
-To customize the appearance, you can modify [app.py](app.py:239-400) and rebuild the container. The CSS is embedded in the `generate_html()` function.
+If you're running on a different port (e.g., 8080), change the port mapping:
+```yaml
+ports:
+  - "8080:5000"
+```
+
+Then access at `http://localhost:8080`
 
 ## Security Notes
 
-- **Never commit your `.env` file** to Git (it's in `.gitignore`)
 - Use strong passwords for your Dispatcharr account
 - Consider using Docker secrets for production deployments
 - Run behind HTTPS in production (use nginx with Let's Encrypt)
+- The container runs as a non-root user for improved security
 
 ## Support
 
 For issues specific to:
 - **Dispatcharr API**: Check Dispatcharr documentation
-- **Container builds**: Check GitHub Actions logs
-- **Application errors**: Check container logs with `docker-compose logs`
+- **Application errors**: Check container logs with `docker logs guidearr`
+- **Container builds**: Check [GitHub Actions](https://github.com/MotWakorb/guidearr/actions)
 
 ## License
 
