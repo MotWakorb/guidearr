@@ -1,6 +1,6 @@
 services:
   guidearr:
-    build: .
+    image: ghcr.io/motwakorb/guidearr:latest
     container_name: guidearr
     restart: unless-stopped
     ports:
