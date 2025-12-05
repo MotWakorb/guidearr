@@ -508,6 +508,8 @@ def generate_grid_html(timeline_html: str, rows_html: str, hours: int, num_slots
                 z-index: 100;
                 background: var(--timeline-bg);
                 border-bottom: 2px solid var(--border-color);
+                overflow-x: hidden;
+                overflow-y: hidden;
             }}
 
             .timeline-header-spacer {{
@@ -2037,10 +2039,14 @@ def grid_view():
         selected_date_utc = selected_date + timedelta(minutes=tz_offset_minutes)
         time_slots = generate_time_slots(hours=hours, interval_minutes=30, start_date=selected_date_utc, start_hour=start_hour)
     else:
-        # For current day, start from midnight instead of current time
+        # For current day, start from local midnight converted to UTC
         # This allows scrolling back to see what was on earlier today
         now_utc = datetime.utcnow()
-        midnight_utc = now_utc.replace(hour=0, minute=0, second=0, microsecond=0)
+        # Convert UTC now to local time to find local midnight
+        now_local = now_utc - timedelta(minutes=tz_offset_minutes)
+        midnight_local = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+        # Convert local midnight back to UTC for querying
+        midnight_utc = midnight_local + timedelta(minutes=tz_offset_minutes)
         time_slots = generate_time_slots(hours=hours, interval_minutes=30, start_date=midnight_utc, start_hour=0)
 
     start_time = time_slots[0]
