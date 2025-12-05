@@ -2086,7 +2086,8 @@ def grid_view():
         # For CST, midnight local + 360min = 6AM UTC (which represents midnight CST in UTC)
         midnight_utc = midnight_local + timedelta(minutes=tz_offset_minutes)
 
-        time_slots = generate_time_slots(hours=hours, interval_minutes=30, start_date=midnight_utc, start_hour=0)
+        # Don't pass start_hour since midnight_utc already has the correct hour set
+        time_slots = generate_time_slots(hours=hours, interval_minutes=30, start_date=midnight_utc, start_hour=None)
 
     start_time = time_slots[0]
     end_time = time_slots[-1]
