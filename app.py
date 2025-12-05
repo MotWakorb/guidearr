@@ -198,11 +198,16 @@ def get_epg_grid(access_token: str) -> List[dict]:
 
     programs = response.json()
 
-    # Handle both array and paginated responses
+    # Handle different response structures
     if isinstance(programs, list):
         return programs
-    elif isinstance(programs, dict) and 'results' in programs:
-        return programs.get('results', [])
+    elif isinstance(programs, dict):
+        # Check for 'data' key (Dispatcharr format)
+        if 'data' in programs:
+            return programs.get('data', [])
+        # Check for 'results' key (paginated format)
+        elif 'results' in programs:
+            return programs.get('results', [])
 
     return []
 
