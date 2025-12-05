@@ -740,12 +740,29 @@ def generate_grid_html(timeline_html: str, rows_html: str, hours: int, num_slots
 
                 // Get current hours parameter from URL or use default
                 const urlParams = new URLSearchParams(window.location.search);
-                const hours = urlParams.get('hours') || '6';
+                const hours = urlParams.get('hours') || '24';
 
-                // Build new URL
-                const newUrl = `/grid?date=${{selectedDate}}&start_hour=${{selectedHour}}&hours=${{hours}}`;
+                // Get timezone offset
+                const tzOffset = new Date().getTimezoneOffset();
+
+                // Build new URL with timezone
+                const newUrl = `/grid?date=${{selectedDate}}&start_hour=${{selectedHour}}&hours=${{hours}}&tz_offset=${{tzOffset}}`;
                 window.location.href = newUrl;
             }}
+
+            // Add timezone offset to URL on page load if not present
+            window.addEventListener('DOMContentLoaded', function() {{
+                const urlParams = new URLSearchParams(window.location.search);
+                const tzOffset = new Date().getTimezoneOffset();
+
+                if (!urlParams.has('tz_offset')) {{
+                    urlParams.set('tz_offset', tzOffset);
+                    const newUrl = window.location.pathname + '?' + urlParams.toString();
+                    window.history.replaceState({{}}, '', newUrl);
+                    // Reload to apply timezone
+                    window.location.href = newUrl;
+                }}
+            }});
         </script>
     </body>
     </html>
@@ -1935,6 +1952,13 @@ def grid_view():
     hours = int(request.args.get('hours', 24))
     hours = min(max(hours, 2), 24)  # Limit between 2-24 hours
 
+    # Get timezone offset from browser (in minutes, e.g., -300 for UTC-5)
+    tz_offset_param = request.args.get('tz_offset', '0')
+    try:
+        tz_offset_minutes = int(tz_offset_param)
+    except ValueError:
+        tz_offset_minutes = 0
+
     # Get date parameter (format: YYYY-MM-DD)
     date_param = request.args.get('date', '')
     start_hour_param = request.args.get('start_hour', '0')
@@ -1953,11 +1977,15 @@ def grid_view():
             selected_date = None
             start_hour = 0
 
-    # Generate time slots
+    # Generate time slots (in UTC, will convert for display)
     if selected_date:
-        time_slots = generate_time_slots(hours=hours, interval_minutes=30, start_date=selected_date, start_hour=start_hour)
+        # If specific date selected, adjust for timezone
+        selected_date_utc = selected_date - timedelta(minutes=tz_offset_minutes)
+        time_slots = generate_time_slots(hours=hours, interval_minutes=30, start_date=selected_date_utc, start_hour=start_hour)
     else:
-        time_slots = generate_time_slots(hours=hours, interval_minutes=30)
+        # For current time, adjust by timezone offset
+        now_local = datetime.utcnow() - timedelta(minutes=tz_offset_minutes)
+        time_slots = generate_time_slots(hours=hours, interval_minutes=30, start_date=now_local)
 
     start_time = time_slots[0]
     end_time = time_slots[-1]
