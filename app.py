@@ -31,6 +31,7 @@ cache = {
     'html': None,
     'channels': None,
     'groups_map': None,
+    'epg_programs': None,
     'last_updated': None,
     'error': None,
     'lock': threading.Lock()
@@ -179,6 +180,33 @@ def get_channels(access_token: str, page_size: int = 100) -> List[dict]:
     raise Exception("Unexpected response structure from channels endpoint")
 
 
+def get_epg_grid(access_token: str) -> List[dict]:
+    """
+    Fetch EPG grid data (programs from previous hour, currently running, and upcoming for next 24 hours).
+    Returns a list of program dictionaries.
+    """
+    base_url = DISPATCHARR_BASE_URL.rstrip('/')
+    epg_grid_url = f"{base_url}/api/epg/grid/"
+
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+        'Accept': 'application/json'
+    }
+
+    response = requests.get(epg_grid_url, headers=headers)
+    response.raise_for_status()
+
+    programs = response.json()
+
+    # Handle both array and paginated responses
+    if isinstance(programs, list):
+        return programs
+    elif isinstance(programs, dict) and 'results' in programs:
+        return programs.get('results', [])
+
+    return []
+
+
 def get_channel_profile_by_name(access_token: str, profile_name: str) -> Optional[dict]:
     """Get a specific channel profile by name."""
     base_url = DISPATCHARR_BASE_URL.rstrip('/')
@@ -221,6 +249,84 @@ def get_channel_ids_from_profile(profile: dict) -> List[int]:
     return channel_ids
 
 
+def get_current_program_for_channel(channel: dict, programs: List[dict]) -> Optional[dict]:
+    """
+    Find the currently airing program for a given channel.
+    Matches by tvg_id and checks if current time is between start_time and end_time.
+    """
+    tvg_id = channel.get('tvg_id')
+    if not tvg_id:
+        return None
+
+    now = datetime.utcnow()
+
+    for program in programs:
+        # Match by tvg_id
+        if program.get('tvg_id') != tvg_id:
+            continue
+
+        # Parse times
+        try:
+            start_time = datetime.fromisoformat(program['start_time'].replace('Z', '+00:00'))
+            end_time = datetime.fromisoformat(program['end_time'].replace('Z', '+00:00'))
+
+            # Remove timezone info for comparison if present
+            if start_time.tzinfo:
+                start_time = start_time.replace(tzinfo=None)
+            if end_time.tzinfo:
+                end_time = end_time.replace(tzinfo=None)
+
+            # Check if now is between start and end
+            if start_time <= now <= end_time:
+                return program
+        except (ValueError, KeyError, AttributeError):
+            continue
+
+    return None
+
+
+def get_next_program_for_channel(channel: dict, programs: List[dict]) -> Optional[dict]:
+    """
+    Find the next upcoming program for a given channel.
+    Returns the program that starts soonest after the current program ends.
+    """
+    tvg_id = channel.get('tvg_id')
+    if not tvg_id:
+        return None
+
+    now = datetime.utcnow()
+    upcoming_programs = []
+
+    for program in programs:
+        # Match by tvg_id
+        if program.get('tvg_id') != tvg_id:
+            continue
+
+        # Parse times
+        try:
+            start_time = datetime.fromisoformat(program['start_time'].replace('Z', '+00:00'))
+
+            # Remove timezone info for comparison if present
+            if start_time.tzinfo:
+                start_time = start_time.replace(tzinfo=None)
+
+            # Only consider programs that haven't started yet
+            if start_time > now:
+                upcoming_programs.append({
+                    'program': program,
+                    'start_time': start_time
+                })
+        except (ValueError, KeyError, AttributeError):
+            continue
+
+    # Sort by start time and return the earliest
+    if upcoming_programs:
+        upcoming_programs.sort(key=lambda x: x['start_time'])
+        return upcoming_programs[0]['program']
+
+    return None
+
+
 def clean_channel_name(name: str) -> str:
     """Remove channel number prefix from channel name (e.g., '2.1 | ABC News' -> 'ABC News')."""
     if not name:
@@ -231,8 +337,12 @@ def clean_channel_name(name: str) -> str:
     return cleaned if cleaned else name
 
 
-def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: Dict[int, dict]) -> str:
-    """Generate the HTML channel guide."""
+def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: Dict[int, dict], epg_programs: List[dict] = None) -> str:
+    """Generate the HTML channel guide with optional EPG data."""
+
+    # Default to empty list if no EPG data provided
+    if epg_programs is None:
+        epg_programs = []
 
     # Sort channels by channel_number
     sorted_channels = sorted(channels, key=lambda ch: float(ch.get('channel_number', 999999)))
@@ -286,6 +396,50 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                 if logo_url:
                     logo_html = f'<img src="{logo_url}" alt="{channel_name}" class="channel-logo" onerror="this.style.display=\'none\'">'
 
+            # Get current and next EPG programs
+            current_program = get_current_program_for_channel(channel, epg_programs)
+            next_program = get_next_program_for_channel(channel, epg_programs)
+
+            # Format EPG info
+            epg_html = ""
+            if current_program:
+                program_title = current_program.get('title', 'Unknown Program')
+                program_subtitle = current_program.get('sub_title', '')
+
+                # Format time
+                try:
+                    start_time = datetime.fromisoformat(current_program['start_time'].replace('Z', '+00:00'))
+                    end_time = datetime.fromisoformat(current_program['end_time'].replace('Z', '+00:00'))
+                    if start_time.tzinfo:
+                        start_time = start_time.replace(tzinfo=None)
+                    if end_time.tzinfo:
+                        end_time = end_time.replace(tzinfo=None)
+                    time_str = f"{start_time.strftime('%I:%M %p')} - {end_time.strftime('%I:%M %p')}"
+                except:
+                    time_str = ""
+
+                epg_html = f"""
+                    <div class="current-program">
+                        <div class="program-title">{program_title}</div>
+                        {f'<div class="program-subtitle">{program_subtitle}</div>' if program_subtitle else ''}
+                        {f'<div class="program-time">{time_str}</div>' if time_str else ''}
+                    </div>
+                """
+
+                # Add next program if available
+                if next_program:
+                    next_title = next_program.get('title', 'Unknown Program')
+                    try:
+                        next_start = datetime.fromisoformat(next_program['start_time'].replace('Z', '+00:00'))
+                        if next_start.tzinfo:
+                            next_start = next_start.replace(tzinfo=None)
+                        next_time_str = next_start.strftime('%I:%M %p')
+                        epg_html += f'<div class="next-program">Up Next: {next_title} ({next_time_str})</div>'
+                    except:
+                        epg_html += f'<div class="next-program">Up Next: {next_title}</div>'
+            else:
+                epg_html = '<div class="no-epg">No program information available</div>'
+
             rows_html += f"""
                 <tr>
                     <td class="channel-number-cell">
@@ -295,6 +449,7 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                         {logo_html}
                     </td>
                     <td class="channel-name">{channel_name}</td>
+                    <td class="epg-info">{epg_html}</td>
                 </tr>
             """
 
@@ -307,6 +462,7 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                             <th>Channel</th>
                             <th></th>
                             <th>Name</th>
+                            <th>Now Playing</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -525,6 +681,51 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                 font-size: 1.05em;
                 color: var(--text-primary);
                 font-weight: 500;
+            }}
+
+            .epg-info {{
+                color: var(--text-secondary);
+                font-size: 0.95em;
+                line-height: 1.5;
+            }}
+
+            .current-program {{
+                margin-bottom: 8px;
+            }}
+
+            .program-title {{
+                font-weight: 600;
+                color: var(--text-primary);
+                font-size: 1em;
+                margin-bottom: 4px;
+            }}
+
+            .program-subtitle {{
+                font-style: italic;
+                color: var(--text-secondary);
+                font-size: 0.9em;
+                margin-bottom: 4px;
+            }}
+
+            .program-time {{
+                font-size: 0.85em;
+                color: #667eea;
+                font-weight: 500;
+                margin-top: 4px;
+            }}
+
+            .next-program {{
+                font-size: 0.85em;
+                color: var(--text-tertiary);
+                padding-top: 6px;
+                border-top: 1px solid var(--border-color);
+                margin-top: 6px;
+            }}
+
+            .no-epg {{
+                font-size: 0.85em;
+                color: var(--text-tertiary);
+                font-style: italic;
             }}
 
             .footer {{
@@ -1100,6 +1301,15 @@ def refresh_cache():
             logos_map = get_logos(access_token)
             print(f"[{datetime.now()}] Fetched {len(logos_map)} logos")
 
+            # Fetch EPG data
+            epg_programs = []
+            try:
+                epg_programs = get_epg_grid(access_token)
+                print(f"[{datetime.now()}] Fetched {len(epg_programs)} EPG programs")
+            except Exception as e:
+                print(f"[{datetime.now()}] Warning: Failed to fetch EPG data: {str(e)}")
+                # Continue without EPG data
+
             # Fetch channels
             channels = get_channels(access_token)
             print(f"[{datetime.now()}] Fetched {len(channels)} channels")
@@ -1130,10 +1340,11 @@ def refresh_cache():
                         print(f"[{datetime.now()}] Excluded {before_count - len(channels)} channels, {len(channels)} remaining")
 
             # Generate and cache HTML
-            html = generate_html(channels, groups_map, logos_map)
+            html = generate_html(channels, groups_map, logos_map, epg_programs)
             cache['html'] = html
             cache['channels'] = channels  # Store raw channel data
             cache['groups_map'] = groups_map  # Store groups map
+            cache['epg_programs'] = epg_programs  # Store EPG data
             cache['last_updated'] = datetime.now()
             cache['error'] = None
 
