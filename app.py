@@ -2037,9 +2037,11 @@ def grid_view():
         selected_date_utc = selected_date + timedelta(minutes=tz_offset_minutes)
         time_slots = generate_time_slots(hours=hours, interval_minutes=30, start_date=selected_date_utc, start_hour=start_hour)
     else:
-        # For current time, convert local time to UTC
+        # For current day, start from midnight instead of current time
+        # This allows scrolling back to see what was on earlier today
         now_utc = datetime.utcnow()
-        time_slots = generate_time_slots(hours=hours, interval_minutes=30, start_date=now_utc)
+        midnight_utc = now_utc.replace(hour=0, minute=0, second=0, microsecond=0)
+        time_slots = generate_time_slots(hours=hours, interval_minutes=30, start_date=midnight_utc, start_hour=0)
 
     start_time = time_slots[0]
     end_time = time_slots[-1]
