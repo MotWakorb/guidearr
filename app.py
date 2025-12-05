@@ -531,27 +531,17 @@ def generate_grid_html(timeline_html: str, rows_html: str, hours: int, num_slots
             .grid-content {{
                 flex: 1;
                 overflow-y: auto;
-                overflow-x: hidden;
+                overflow-x: auto;
+                position: relative;
             }}
 
             .grid-scroll-area {{
-                display: flex;
+                display: inline-block;
+                min-width: 100%;
             }}
 
             .channels-column {{
-                width: 200px;
-                flex-shrink: 0;
-                position: sticky;
-                left: 0;
-                z-index: 50;
-                background: var(--channel-bg);
-                border-right: 2px solid var(--border-color);
-            }}
-
-            .programs-column {{
-                flex: 1;
-                overflow-x: auto;
-                overflow-y: hidden;
+                display: none;
             }}
 
             .grid-row {{
@@ -670,25 +660,26 @@ def generate_grid_html(timeline_html: str, rows_html: str, hours: int, num_slots
                 border-top: 2px solid var(--border-color);
             }}
 
-            .programs-column {{
+            .grid-content {{
                 scrollbar-width: thin;
                 scrollbar-color: #667eea var(--bg-tertiary);
             }}
 
-            .programs-column::-webkit-scrollbar {{
+            .grid-content::-webkit-scrollbar {{
                 height: 12px;
+                width: 12px;
             }}
 
-            .programs-column::-webkit-scrollbar-track {{
+            .grid-content::-webkit-scrollbar-track {{
                 background: var(--bg-tertiary);
             }}
 
-            .programs-column::-webkit-scrollbar-thumb {{
+            .grid-content::-webkit-scrollbar-thumb {{
                 background: #667eea;
                 border-radius: 6px;
             }}
 
-            .programs-column::-webkit-scrollbar-thumb:hover {{
+            .grid-content::-webkit-scrollbar-thumb:hover {{
                 background: #5568d3;
             }}
         </style>
@@ -733,10 +724,10 @@ def generate_grid_html(timeline_html: str, rows_html: str, hours: int, num_slots
 
         <script>
             // Sync scrolling between timeline and content
-            const programsColumn = document.querySelector('.programs-column');
+            const gridContent = document.querySelector('.grid-content');
             const timelineHeader = document.querySelector('.timeline-header');
 
-            programsColumn.addEventListener('scroll', (e) => {{
+            gridContent.addEventListener('scroll', (e) => {{
                 timelineHeader.scrollLeft = e.target.scrollLeft;
             }});
 
@@ -1941,7 +1932,7 @@ def grid_view():
     epg_programs = cache.get('epg_programs', [])
 
     # Get parameters
-    hours = int(request.args.get('hours', 6))
+    hours = int(request.args.get('hours', 24))
     hours = min(max(hours, 2), 24)  # Limit between 2-24 hours
 
     # Get date parameter (format: YYYY-MM-DD)
