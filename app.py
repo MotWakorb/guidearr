@@ -1981,10 +1981,16 @@ def refresh_cache():
             logos_map = get_logos(access_token)
             print(f"[{datetime.now()}] Fetched {len(logos_map)} logos")
 
-            # Fetch EPG data
+            # Fetch EPG data - try to get from midnight today to end of tomorrow
             epg_programs = []
             try:
-                epg_programs = get_epg_grid(access_token)
+                # Calculate time range: midnight today to midnight tomorrow (24+ hours)
+                now_utc = datetime.utcnow()
+                midnight_today = now_utc.replace(hour=0, minute=0, second=0, microsecond=0)
+                end_tomorrow = midnight_today + timedelta(hours=48)  # 2 full days
+
+                # Try date range fetch first, fall back to grid endpoint
+                epg_programs = get_epg_programs_by_date_range(access_token, midnight_today, end_tomorrow)
                 print(f"[{datetime.now()}] Fetched {len(epg_programs)} EPG programs")
             except Exception as e:
                 print(f"[{datetime.now()}] Warning: Failed to fetch EPG data: {str(e)}")
@@ -2212,16 +2218,8 @@ def grid_view():
     start_time = time_slots[0]
     end_time = time_slots[-1]
 
-    # Try to fetch EPG data for the specific date range being viewed
-    # This allows viewing past programs if the API supports date range queries
-    try:
-        access_token = get_access_token()
-        epg_programs = get_epg_programs_by_date_range(access_token, start_time, end_time)
-        print(f"Fetched {len(epg_programs)} EPG programs for time range {start_time} to {end_time}")
-    except Exception as e:
-        # Fall back to cached EPG data if dynamic fetch fails
-        print(f"Failed to fetch EPG for date range, using cached data: {e}")
-        epg_programs = cache.get('epg_programs', [])
+    # Use cached EPG data (refreshed every 30 minutes with wider time range)
+    epg_programs = cache.get('epg_programs', [])
 
     # Sort and filter channels
     sorted_channels = sorted(channels, key=lambda ch: float(ch.get('channel_number', 999999)))
