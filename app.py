@@ -181,6 +181,81 @@ def get_channels(access_token: str, page_size: int = 100) -> List[dict]:
     raise Exception("Unexpected response structure from channels endpoint")
 
 
+def get_epg_programs_by_date_range(access_token: str, start_time: datetime, end_time: datetime) -> List[dict]:
+    """
+    Try to fetch EPG programs for a specific date range.
+    Falls back to get_epg_grid if date range filtering is not supported.
+    """
+    base_url = DISPATCHARR_BASE_URL.rstrip('/')
+
+    # Try /api/epg/programs/ with date filters
+    programs_url = f"{base_url}/api/epg/programs/"
+
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+        'Accept': 'application/json'
+    }
+
+    # Try common date filter parameter patterns
+    params_attempts = [
+        {
+            'start_time__gte': start_time.strftime('%Y-%m-%dT%H:%M:%SZ'),
+            'end_time__lte': end_time.strftime('%Y-%m-%dT%H:%M:%SZ')
+        },
+        {
+            'start_time_min': start_time.strftime('%Y-%m-%dT%H:%M:%SZ'),
+            'end_time_max': end_time.strftime('%Y-%m-%dT%H:%M:%SZ')
+        },
+        {
+            'start': start_time.strftime('%Y-%m-%dT%H:%M:%SZ'),
+            'end': end_time.strftime('%Y-%m-%dT%H:%M:%SZ')
+        }
+    ]
+
+    for params in params_attempts:
+        try:
+            response = requests.get(programs_url, headers=headers, params=params, timeout=10)
+            if response.status_code == 200:
+                programs = response.json()
+
+                # Handle different response structures
+                if isinstance(programs, list):
+                    program_list = programs
+                elif isinstance(programs, dict):
+                    program_list = programs.get('data', programs.get('results', []))
+                else:
+                    continue
+
+                # If we got programs, filter them by date range on client side
+                if program_list:
+                    filtered = []
+                    for prog in program_list:
+                        try:
+                            prog_start = datetime.fromisoformat(prog['start_time'].replace('Z', '+00:00'))
+                            prog_end = datetime.fromisoformat(prog['end_time'].replace('Z', '+00:00'))
+                            if prog_start.tzinfo:
+                                prog_start = prog_start.replace(tzinfo=None)
+                            if prog_end.tzinfo:
+                                prog_end = prog_end.replace(tzinfo=None)
+
+                            # Check if program overlaps with our time range
+                            if prog_start < end_time and prog_end > start_time:
+                                filtered.append(prog)
+                        except (ValueError, KeyError):
+                            continue
+
+                    if filtered:
+                        print(f"Successfully fetched {len(filtered)} programs for date range {start_time} to {end_time}")
+                        return filtered
+        except Exception as e:
+            print(f"Attempt with params {params} failed: {e}")
+            continue
+
+    # If all attempts failed, fall back to grid endpoint
+    print(f"Date range filtering not supported, falling back to /api/epg/grid/")
+    return get_epg_grid(access_token)
+
+
 def get_epg_grid(access_token: str) -> List[dict]:
     """
     Fetch EPG grid data (programs from previous hour, currently running, and upcoming for next 24 hours).
@@ -763,6 +838,51 @@ def generate_grid_html(timeline_html: str, rows_html: str, hours: int, num_slots
                     window.history.replaceState({{}}, '', newUrl);
                     // Reload to apply timezone
                     window.location.href = newUrl;
+                }}
+            }});
+
+            // Auto-scroll to current time on page load
+            window.addEventListener('load', function() {{
+                // Get current time
+                const now = new Date();
+                const currentHour = now.getHours();
+                const currentMinute = now.getMinutes();
+
+                // Calculate time slots
+                // Each slot is 30 minutes wide (200px per slot)
+                const slotWidth = {slot_width};
+                const intervalMinutes = 30;
+
+                // Get the start time from URL or assume midnight
+                const urlParams = new URLSearchParams(window.location.search);
+                const dateParam = urlParams.get('date');
+                const startHourParam = parseInt(urlParams.get('start_hour')) || 0;
+
+                // Calculate hours since start of display
+                let hoursSinceStart = currentHour - startHourParam;
+                let minutesSinceStart = currentMinute;
+
+                // If we have a specific date selected that's not today, don't auto-scroll
+                if (dateParam && dateParam !== new Date().toISOString().split('T')[0]) {{
+                    return;
+                }}
+
+                // If current time is before the start hour, don't scroll (we're showing past day)
+                if (hoursSinceStart < 0) {{
+                    return;
+                }}
+
+                // Calculate total minutes since start
+                const totalMinutesSinceStart = (hoursSinceStart * 60) + minutesSinceStart;
+
+                // Calculate scroll position (number of slots * slot width)
+                const scrollPosition = (totalMinutesSinceStart / intervalMinutes) * slotWidth;
+
+                // Center the current time in view (subtract half viewport width)
+                const gridContent = document.querySelector('.grid-content');
+                if (gridContent) {{
+                    const centerOffset = gridContent.clientWidth / 2;
+                    gridContent.scrollLeft = Math.max(0, scrollPosition - centerOffset);
                 }}
             }});
         </script>
@@ -2091,6 +2211,17 @@ def grid_view():
 
     start_time = time_slots[0]
     end_time = time_slots[-1]
+
+    # Try to fetch EPG data for the specific date range being viewed
+    # This allows viewing past programs if the API supports date range queries
+    try:
+        access_token = get_access_token()
+        epg_programs = get_epg_programs_by_date_range(access_token, start_time, end_time)
+        print(f"Fetched {len(epg_programs)} EPG programs for time range {start_time} to {end_time}")
+    except Exception as e:
+        # Fall back to cached EPG data if dynamic fetch fails
+        print(f"Failed to fetch EPG for date range, using cached data: {e}")
+        epg_programs = cache.get('epg_programs', [])
 
     # Sort and filter channels
     sorted_channels = sorted(channels, key=lambda ch: float(ch.get('channel_number', 999999)))
