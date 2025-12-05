@@ -343,12 +343,40 @@ def clean_channel_name(name: str) -> str:
     return cleaned if cleaned else name
 
 
-def generate_grid_html(timeline_html: str, rows_html: str, hours: int, num_slots: int, slot_width: int) -> str:
+def generate_grid_html(timeline_html: str, rows_html: str, hours: int, num_slots: int, slot_width: int, selected_date: str = '', start_hour: int = 0) -> str:
     """Generate the complete HTML for the grid view."""
     total_width = num_slots * slot_width
 
     last_updated = cache.get('last_updated')
     updated_str = last_updated.strftime('%Y-%m-%d %H:%M:%S') if last_updated else 'Unknown'
+
+    # Generate date options (today + next 7 days)
+    from datetime import timedelta
+    today = datetime.utcnow().date()
+    date_options = []
+    for i in range(8):
+        date = today + timedelta(days=i)
+        date_str = date.strftime('%Y-%m-%d')
+        display_label = 'Today' if i == 0 else ('Tomorrow' if i == 1 else date.strftime('%A, %b %d'))
+        selected = 'selected' if date_str == selected_date else ''
+        date_options.append(f'<option value="{date_str}" {selected}>{display_label}</option>')
+
+    date_options_html = '\n'.join(date_options)
+
+    # Generate hour options
+    hour_options = []
+    for h in range(0, 24, 6):
+        selected = 'selected' if h == start_hour else ''
+        hour_label = f"{h:02d}:00" if h > 0 else "Midnight"
+        if h == 6:
+            hour_label = "6:00 AM"
+        elif h == 12:
+            hour_label = "Noon"
+        elif h == 18:
+            hour_label = "6:00 PM"
+        hour_options.append(f'<option value="{h}" {selected}>{hour_label}</option>')
+
+    hour_options_html = '\n'.join(hour_options)
 
     html = f'''
     <!DOCTYPE html>
@@ -413,6 +441,57 @@ def generate_grid_html(timeline_html: str, rows_html: str, hours: int, num_slots
 
             .view-toggle:hover {{
                 background: #5568d3;
+            }}
+
+            .date-selector {{
+                display: flex;
+                gap: 10px;
+                align-items: center;
+                flex: 1;
+                justify-content: center;
+            }}
+
+            .date-selector label {{
+                color: var(--text-secondary);
+                font-size: 0.9em;
+                font-weight: 500;
+            }}
+
+            .date-selector select {{
+                background: var(--bg-tertiary);
+                color: var(--text-primary);
+                border: 1px solid var(--border-color);
+                padding: 8px 12px;
+                border-radius: 6px;
+                font-size: 0.95em;
+                cursor: pointer;
+                min-width: 150px;
+            }}
+
+            .date-selector select:hover {{
+                border-color: #667eea;
+            }}
+
+            .date-selector select:focus {{
+                outline: none;
+                border-color: #667eea;
+                box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+            }}
+
+            .date-selector button {{
+                background: #50C878;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-weight: 600;
+                font-size: 0.95em;
+                transition: background 0.2s;
+            }}
+
+            .date-selector button:hover {{
+                background: #45b369;
             }}
 
             .grid-container {{
@@ -617,6 +696,17 @@ def generate_grid_html(timeline_html: str, rows_html: str, hours: int, num_slots
     <body>
         <div class="header">
             <h1>{PAGE_TITLE} - Grid View ({hours} hours)</h1>
+            <div class="date-selector">
+                <label for="date-select">Date:</label>
+                <select id="date-select">
+                    {date_options_html}
+                </select>
+                <label for="hour-select">Start:</label>
+                <select id="hour-select">
+                    {hour_options_html}
+                </select>
+                <button onclick="updateGrid()">Update</button>
+            </div>
             <a href="/" class="view-toggle">📋 List View</a>
         </div>
 
@@ -649,6 +739,22 @@ def generate_grid_html(timeline_html: str, rows_html: str, hours: int, num_slots
             programsColumn.addEventListener('scroll', (e) => {{
                 timelineHeader.scrollLeft = e.target.scrollLeft;
             }});
+
+            // Update grid with selected date and time
+            function updateGrid() {{
+                const dateSelect = document.getElementById('date-select');
+                const hourSelect = document.getElementById('hour-select');
+                const selectedDate = dateSelect.value;
+                const selectedHour = hourSelect.value;
+
+                // Get current hours parameter from URL or use default
+                const urlParams = new URLSearchParams(window.location.search);
+                const hours = urlParams.get('hours') || '6';
+
+                // Build new URL
+                const newUrl = `/grid?date=${{selectedDate}}&start_hour=${{selectedHour}}&hours=${{hours}}`;
+                window.location.href = newUrl;
+            }}
         </script>
     </body>
     </html>
@@ -657,14 +763,29 @@ def generate_grid_html(timeline_html: str, rows_html: str, hours: int, num_slots
     return html
 
 
-def generate_time_slots(hours: int = 6, interval_minutes: int = 30) -> List[datetime]:
-    """Generate time slots starting from current time for the specified number of hours."""
+def generate_time_slots(hours: int = 6, interval_minutes: int = 30, start_date: datetime = None, start_hour: int = None) -> List[datetime]:
+    """
+    Generate time slots for the specified number of hours.
+
+    Args:
+        hours: Number of hours to generate slots for
+        interval_minutes: Minutes per slot (default 30)
+        start_date: Specific date to start from (default: current UTC time)
+        start_hour: Specific hour to start from (0-23, default: current hour rounded down)
+    """
     from datetime import timedelta
 
-    now = datetime.utcnow()
-    # Round down to nearest interval
-    minutes = (now.minute // interval_minutes) * interval_minutes
-    start_time = now.replace(minute=minutes, second=0, microsecond=0)
+    if start_date is None:
+        now = datetime.utcnow()
+    else:
+        now = start_date
+
+    # If start_hour specified, use it; otherwise round down to nearest interval
+    if start_hour is not None:
+        start_time = now.replace(hour=start_hour, minute=0, second=0, microsecond=0)
+    else:
+        minutes = (now.minute // interval_minutes) * interval_minutes
+        start_time = now.replace(minute=minutes, second=0, microsecond=0)
 
     slots = []
     num_slots = (hours * 60) // interval_minutes
@@ -1819,12 +1940,34 @@ def grid_view():
     logos_map = cache.get('logos_map', {})
     epg_programs = cache.get('epg_programs', [])
 
-    # Get hours parameter (default 6 hours)
+    # Get parameters
     hours = int(request.args.get('hours', 6))
     hours = min(max(hours, 2), 24)  # Limit between 2-24 hours
 
-    # Generate time slots (30-minute intervals)
-    time_slots = generate_time_slots(hours=hours, interval_minutes=30)
+    # Get date parameter (format: YYYY-MM-DD)
+    date_param = request.args.get('date', '')
+    start_hour_param = request.args.get('start_hour', '0')
+
+    selected_date = None
+    start_hour = 0
+
+    if date_param:
+        try:
+            # Parse the date
+            selected_date = datetime.strptime(date_param, '%Y-%m-%d')
+            start_hour = int(start_hour_param)
+            start_hour = min(max(start_hour, 0), 23)
+        except ValueError:
+            # Invalid date format, use current time
+            selected_date = None
+            start_hour = 0
+
+    # Generate time slots
+    if selected_date:
+        time_slots = generate_time_slots(hours=hours, interval_minutes=30, start_date=selected_date, start_hour=start_hour)
+    else:
+        time_slots = generate_time_slots(hours=hours, interval_minutes=30)
+
     start_time = time_slots[0]
     end_time = time_slots[-1]
 
@@ -1922,7 +2065,8 @@ def grid_view():
         '''
 
     # Generate full HTML
-    grid_html = generate_grid_html(timeline_html, rows_html, hours, len(time_slots), slot_width)
+    selected_date_str = selected_date.strftime('%Y-%m-%d') if selected_date else ''
+    grid_html = generate_grid_html(timeline_html, rows_html, hours, len(time_slots), slot_width, selected_date_str, start_hour)
 
     return grid_html
 
