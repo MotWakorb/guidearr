@@ -31,6 +31,7 @@ cache = {
     'html': None,
     'channels': None,
     'groups_map': None,
+    'logos_map': None,
     'epg_programs': None,
     'last_updated': None,
     'error': None,
@@ -340,6 +341,376 @@ def clean_channel_name(name: str) -> str:
     # Remove pattern like "2.1 | " or "102 | "
     cleaned = re.sub(r'^\d+(\.\d+)?\s*\|\s*', '', name)
     return cleaned if cleaned else name
+
+
+def generate_grid_html(timeline_html: str, rows_html: str, hours: int, num_slots: int, slot_width: int) -> str:
+    """Generate the complete HTML for the grid view."""
+    total_width = num_slots * slot_width
+
+    last_updated = cache.get('last_updated')
+    updated_str = last_updated.strftime('%Y-%m-%d %H:%M:%S') if last_updated else 'Unknown'
+
+    html = f'''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{PAGE_TITLE} - Grid View</title>
+        <style>
+            * {{
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }}
+
+            :root {{
+                --bg-primary: #0a0a0f;
+                --bg-secondary: #16213e;
+                --bg-tertiary: #1a1a2e;
+                --text-primary: #e8e8e8;
+                --text-secondary: #9aa5ce;
+                --border-color: #2a3f5f;
+                --channel-bg: #1a1a2e;
+                --program-bg: #2d3e5f;
+                --program-hover: #3d4e6f;
+                --timeline-bg: #16213e;
+            }}
+
+            body {{
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                background: var(--bg-primary);
+                color: var(--text-primary);
+                overflow: hidden;
+                height: 100vh;
+            }}
+
+            .header {{
+                background: var(--bg-secondary);
+                padding: 15px 20px;
+                border-bottom: 2px solid var(--border-color);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+
+            .header h1 {{
+                font-size: 1.5em;
+                color: var(--text-primary);
+            }}
+
+            .view-toggle {{
+                background: #667eea;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-weight: 600;
+                text-decoration: none;
+                display: inline-block;
+            }}
+
+            .view-toggle:hover {{
+                background: #5568d3;
+            }}
+
+            .grid-container {{
+                height: calc(100vh - 100px);
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }}
+
+            .timeline-header {{
+                display: flex;
+                position: sticky;
+                top: 0;
+                z-index: 100;
+                background: var(--timeline-bg);
+                border-bottom: 2px solid var(--border-color);
+            }}
+
+            .timeline-header-spacer {{
+                width: 200px;
+                flex-shrink: 0;
+                border-right: 2px solid var(--border-color);
+                background: var(--timeline-bg);
+            }}
+
+            .time-slot-header {{
+                width: {slot_width}px;
+                flex-shrink: 0;
+                text-align: center;
+                padding: 12px 8px;
+                font-weight: 600;
+                font-size: 0.9em;
+                border-right: 1px solid var(--border-color);
+                color: var(--text-primary);
+            }}
+
+            .grid-content {{
+                flex: 1;
+                overflow-y: auto;
+                overflow-x: hidden;
+            }}
+
+            .grid-scroll-area {{
+                display: flex;
+            }}
+
+            .channels-column {{
+                width: 200px;
+                flex-shrink: 0;
+                position: sticky;
+                left: 0;
+                z-index: 50;
+                background: var(--channel-bg);
+                border-right: 2px solid var(--border-color);
+            }}
+
+            .programs-column {{
+                flex: 1;
+                overflow-x: auto;
+                overflow-y: hidden;
+            }}
+
+            .grid-row {{
+                display: flex;
+                border-bottom: 1px solid var(--border-color);
+                min-height: 80px;
+            }}
+
+            .channel-info {{
+                width: 200px;
+                flex-shrink: 0;
+                padding: 10px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                background: var(--channel-bg);
+                position: sticky;
+                left: 0;
+                z-index: 10;
+            }}
+
+            .channel-num {{
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 4px 10px;
+                border-radius: 12px;
+                font-weight: 700;
+                font-size: 0.85em;
+                min-width: 35px;
+                text-align: center;
+                flex-shrink: 0;
+            }}
+
+            .grid-channel-logo {{
+                max-width: 50px;
+                max-height: 35px;
+                object-fit: contain;
+                flex-shrink: 0;
+            }}
+
+            .channel-name-grid {{
+                font-size: 0.9em;
+                font-weight: 500;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }}
+
+            .program-timeline {{
+                position: relative;
+                min-width: {total_width}px;
+                height: 80px;
+            }}
+
+            .program-block {{
+                position: absolute;
+                top: 4px;
+                height: 72px;
+                background: var(--program-bg);
+                border: 1px solid var(--border-color);
+                border-radius: 6px;
+                padding: 8px;
+                overflow: hidden;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }}
+
+            .program-block:hover {{
+                background: var(--program-hover);
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+                z-index: 10;
+            }}
+
+            .program-block.no-data {{
+                background: transparent;
+                border: 1px dashed var(--border-color);
+                color: var(--text-secondary);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-style: italic;
+                font-size: 0.85em;
+                cursor: default;
+            }}
+
+            .program-block.no-data:hover {{
+                transform: none;
+                box-shadow: none;
+            }}
+
+            .program-block-title {{
+                font-weight: 600;
+                font-size: 0.9em;
+                color: var(--text-primary);
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                margin-bottom: 4px;
+            }}
+
+            .program-block-subtitle {{
+                font-size: 0.8em;
+                color: var(--text-secondary);
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }}
+
+            .footer {{
+                background: var(--bg-secondary);
+                padding: 10px 20px;
+                text-align: center;
+                font-size: 0.85em;
+                color: var(--text-secondary);
+                border-top: 2px solid var(--border-color);
+            }}
+
+            .programs-column {{
+                scrollbar-width: thin;
+                scrollbar-color: #667eea var(--bg-tertiary);
+            }}
+
+            .programs-column::-webkit-scrollbar {{
+                height: 12px;
+            }}
+
+            .programs-column::-webkit-scrollbar-track {{
+                background: var(--bg-tertiary);
+            }}
+
+            .programs-column::-webkit-scrollbar-thumb {{
+                background: #667eea;
+                border-radius: 6px;
+            }}
+
+            .programs-column::-webkit-scrollbar-thumb:hover {{
+                background: #5568d3;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>{PAGE_TITLE} - Grid View ({hours} hours)</h1>
+            <a href="/" class="view-toggle">📋 List View</a>
+        </div>
+
+        <div class="grid-container">
+            <div class="timeline-header">
+                {timeline_html}
+            </div>
+
+            <div class="grid-content">
+                <div class="grid-scroll-area">
+                    <div class="channels-column">
+                        <!-- Channel info column is part of each row -->
+                    </div>
+                    <div class="programs-column">
+                        {rows_html}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            Last updated: {updated_str} | Showing first 100 channels
+        </div>
+
+        <script>
+            // Sync scrolling between timeline and content
+            const programsColumn = document.querySelector('.programs-column');
+            const timelineHeader = document.querySelector('.timeline-header');
+
+            programsColumn.addEventListener('scroll', (e) => {{
+                timelineHeader.scrollLeft = e.target.scrollLeft;
+            }});
+        </script>
+    </body>
+    </html>
+    '''
+
+    return html
+
+
+def generate_time_slots(hours: int = 6, interval_minutes: int = 30) -> List[datetime]:
+    """Generate time slots starting from current time for the specified number of hours."""
+    from datetime import timedelta
+
+    now = datetime.utcnow()
+    # Round down to nearest interval
+    minutes = (now.minute // interval_minutes) * interval_minutes
+    start_time = now.replace(minute=minutes, second=0, microsecond=0)
+
+    slots = []
+    num_slots = (hours * 60) // interval_minutes
+
+    for i in range(num_slots + 1):
+        slot_time = start_time + timedelta(minutes=i * interval_minutes)
+        slots.append(slot_time)
+
+    return slots
+
+
+def get_programs_in_timerange(channel: dict, programs: List[dict], start_time: datetime, end_time: datetime) -> List[dict]:
+    """Get all programs for a channel within a time range."""
+    tvg_id = channel.get('tvg_id')
+    if not tvg_id:
+        return []
+
+    matching_programs = []
+
+    for program in programs:
+        if program.get('tvg_id') != tvg_id:
+            continue
+
+        try:
+            prog_start = datetime.fromisoformat(program['start_time'].replace('Z', '+00:00'))
+            prog_end = datetime.fromisoformat(program['end_time'].replace('Z', '+00:00'))
+
+            if prog_start.tzinfo:
+                prog_start = prog_start.replace(tzinfo=None)
+            if prog_end.tzinfo:
+                prog_end = prog_end.replace(tzinfo=None)
+
+            # Check if program overlaps with time range
+            if prog_start < end_time and prog_end > start_time:
+                matching_programs.append({
+                    **program,
+                    'parsed_start': prog_start,
+                    'parsed_end': prog_end
+                })
+        except (ValueError, KeyError, AttributeError):
+            continue
+
+    # Sort by start time
+    matching_programs.sort(key=lambda p: p['parsed_start'])
+
+    return matching_programs
 
 
 def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: Dict[int, dict], epg_programs: List[dict] = None) -> str:
@@ -1103,7 +1474,8 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
             <p class="cache-info">Last updated: {updated_str}</p>
         </div>
 
-        <!-- Print Button -->
+        <!-- View Buttons -->
+        <a href="/grid" class="grid-button" style="position: fixed; bottom: 90px; right: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 25px; border-radius: 50px; font-size: 1.1em; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3); transition: all 0.3s ease; z-index: 1000; text-decoration: none; display: inline-block;">📺 Grid View</a>
         <button class="print-button" onclick="openPrintDialog()">📄 Printable Guide</button>
 
         <!-- Print Dialog Modal -->
@@ -1349,6 +1721,7 @@ def refresh_cache():
             cache['html'] = html
             cache['channels'] = channels  # Store raw channel data
             cache['groups_map'] = groups_map  # Store groups map
+            cache['logos_map'] = logos_map  # Store logos map
             cache['epg_programs'] = epg_programs  # Store EPG data
             cache['last_updated'] = datetime.now()
             cache['error'] = None
@@ -1429,6 +1802,129 @@ def manual_refresh():
         'status': 'refreshed',
         'last_updated': cache['last_updated'].isoformat() if cache['last_updated'] else None
     }), 200
+
+
+@app.route('/grid')
+def grid_view():
+    """Generate a scrollable grid view with timeline."""
+    from datetime import timedelta
+    from flask import request
+
+    # Check if cache is populated
+    if cache['channels'] is None or cache['groups_map'] is None:
+        return "Cache is loading, please try again in a moment...", 503
+
+    channels = cache['channels']
+    groups_map = cache['groups_map']
+    logos_map = cache.get('logos_map', {})
+    epg_programs = cache.get('epg_programs', [])
+
+    # Get hours parameter (default 6 hours)
+    hours = int(request.args.get('hours', 6))
+    hours = min(max(hours, 2), 24)  # Limit between 2-24 hours
+
+    # Generate time slots (30-minute intervals)
+    time_slots = generate_time_slots(hours=hours, interval_minutes=30)
+    start_time = time_slots[0]
+    end_time = time_slots[-1]
+
+    # Sort and filter channels
+    sorted_channels = sorted(channels, key=lambda ch: float(ch.get('channel_number', 999999)))
+
+    # Filter by channel profile if specified
+    if CHANNEL_PROFILE_NAME:
+        # This filtering is already done in cache, but let's be safe
+        pass
+
+    # Exclude channel groups if specified
+    if EXCLUDE_CHANNEL_GROUPS:
+        exclude_names = [name.strip().lower() for name in EXCLUDE_CHANNEL_GROUPS.split(',') if name.strip()]
+        if exclude_names:
+            exclude_group_ids = [gid for gid, gname in groups_map.items() if gname.lower() in exclude_names]
+            sorted_channels = [ch for ch in sorted_channels if ch.get('channel_group_id') not in exclude_group_ids]
+
+    # Build timeline header HTML
+    timeline_html = '<div class="timeline-header-spacer"></div>'  # Spacer for channel column
+
+    for slot in time_slots:
+        time_label = slot.strftime('%I:%M %p').lstrip('0')
+        timeline_html += f'<div class="time-slot-header">{time_label}</div>'
+
+    # Build channel rows
+    rows_html = ""
+    slot_width = 200  # pixels per 30-minute slot
+
+    for channel in sorted_channels[:100]:  # Limit to first 100 channels for performance
+        channel_number = channel.get('channel_number', 'N/A')
+        if channel_number != 'N/A':
+            try:
+                float_num = float(channel_number)
+                channel_number = str(int(float_num)) if float_num == int(float_num) else str(float_num)
+            except:
+                pass
+
+        channel_name = clean_channel_name(channel.get('name', 'Unknown'))
+
+        # Get logo
+        logo_html = ""
+        logo_id = channel.get('logo_id')
+        if logo_id and logo_id in logos_map:
+            logo = logos_map[logo_id]
+            logo_url = logo.get('cache_url') or logo.get('url', '')
+            if logo_url:
+                logo_html = f'<img src="{logo_url}" alt="{channel_name}" class="grid-channel-logo">'
+
+        # Get programs for this channel in the time range
+        channel_programs = get_programs_in_timerange(channel, epg_programs, start_time, end_time)
+
+        # Build program blocks
+        program_blocks = ""
+
+        if channel_programs:
+            for program in channel_programs:
+                # Calculate position and width
+                prog_start = max(program['parsed_start'], start_time)
+                prog_end = min(program['parsed_end'], end_time)
+
+                # Calculate offset from start time in minutes
+                offset_minutes = (prog_start - start_time).total_seconds() / 60
+                duration_minutes = (prog_end - prog_start).total_seconds() / 60
+
+                # Convert to pixels
+                left_px = (offset_minutes / 30) * slot_width
+                width_px = (duration_minutes / 30) * slot_width
+
+                title = program.get('title', 'Unknown')
+                subtitle = program.get('sub_title', '')
+
+                program_blocks += f'''
+                    <div class="program-block" style="left: {left_px}px; width: {width_px}px;" title="{title}{' - ' + subtitle if subtitle else ''}">
+                        <div class="program-block-title">{title}</div>
+                        {f'<div class="program-block-subtitle">{subtitle}</div>' if subtitle else ''}
+                    </div>
+                '''
+        else:
+            # No EPG data
+            total_width = len(time_slots) * slot_width
+            program_blocks = f'<div class="program-block no-data" style="left: 0; width: {total_width}px;">No program data</div>'
+
+        rows_html += f'''
+            <div class="grid-row">
+                <div class="channel-info">
+                    <div class="channel-num">{channel_number}</div>
+                    {logo_html}
+                    <div class="channel-name-grid">{channel_name}</div>
+                </div>
+                <div class="program-timeline">
+                    {program_blocks}
+                </div>
+            </div>
+        '''
+
+    # Generate full HTML
+    grid_html = generate_grid_html(timeline_html, rows_html, hours, len(time_slots), slot_width)
+
+    return grid_html
 
 
 @app.route('/print')
