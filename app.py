@@ -1987,6 +1987,28 @@ def manual_refresh():
     }), 200
 
 
+@app.route('/debug/timezone')
+def debug_timezone():
+    """Debug endpoint to check timezone offset."""
+    from flask import request
+    from datetime import timedelta
+
+    tz_offset_minutes = int(request.args.get('tz_offset', '0'))
+    now_utc = datetime.utcnow()
+    now_local = now_utc - timedelta(minutes=tz_offset_minutes)
+    midnight_local = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+    midnight_utc = midnight_local + timedelta(minutes=tz_offset_minutes)
+
+    return jsonify({
+        'tz_offset_minutes': tz_offset_minutes,
+        'now_utc': now_utc.isoformat(),
+        'now_local': now_local.isoformat(),
+        'midnight_local': midnight_local.isoformat(),
+        'midnight_utc': midnight_utc.isoformat(),
+        'first_display_time': (midnight_utc - timedelta(minutes=tz_offset_minutes)).strftime('%I:%M %p')
+    }), 200
+
+
 @app.route('/grid')
 def grid_view():
     """Generate a scrollable grid view with timeline."""
@@ -2035,18 +2057,35 @@ def grid_view():
     # Note: getTimezoneOffset() returns positive values for zones west of UTC
     # e.g., CST (UTC-6) returns 360, so we ADD to local time to get UTC
     if selected_date:
-        # If specific date selected, convert local time to UTC
-        selected_date_utc = selected_date + timedelta(minutes=tz_offset_minutes)
-        time_slots = generate_time_slots(hours=hours, interval_minutes=30, start_date=selected_date_utc, start_hour=start_hour)
+        # If specific date selected, apply the start_hour and convert to UTC
+        # selected_date is parsed as naive datetime (e.g., 2025-12-05 00:00:00)
+        # We need to apply start_hour in local time, then convert to UTC
+
+        # Apply the selected start hour to the selected date (in local time)
+        local_start = selected_date.replace(hour=start_hour, minute=0, second=0, microsecond=0)
+
+        # Convert to UTC by adding the offset
+        # For CST: local 00:00 + 360min = 06:00 UTC
+        selected_datetime_utc = local_start + timedelta(minutes=tz_offset_minutes)
+
+        # Don't pass start_hour to generate_time_slots since we already set the correct hour
+        time_slots = generate_time_slots(hours=hours, interval_minutes=30, start_date=selected_datetime_utc, start_hour=None)
     else:
-        # For current day, start from local midnight converted to UTC
-        # This allows scrolling back to see what was on earlier today
+        # For current day, start from local midnight
+        # Step 1: Get current UTC time
         now_utc = datetime.utcnow()
-        # Convert UTC now to local time to find local midnight
+
+        # Step 2: Convert to user's local time by subtracting offset
+        # For CST (offset=360), UTC - 360min = Local time
         now_local = now_utc - timedelta(minutes=tz_offset_minutes)
+
+        # Step 3: Get midnight in user's local time
         midnight_local = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
-        # Convert local midnight back to UTC for querying
+
+        # Step 4: Convert back to UTC by adding offset
+        # For CST, midnight local + 360min = 6AM UTC (which represents midnight CST in UTC)
         midnight_utc = midnight_local + timedelta(minutes=tz_offset_minutes)
+
         time_slots = generate_time_slots(hours=hours, interval_minutes=30, start_date=midnight_utc, start_hour=0)
 
     start_time = time_slots[0]
