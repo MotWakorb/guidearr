@@ -911,7 +911,7 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                 program_title = current_program.get('title', 'Unknown Program')
                 program_subtitle = current_program.get('sub_title', '')
 
-                # Format time
+                # Format time - store UTC timestamps for JavaScript conversion
                 try:
                     start_time = datetime.fromisoformat(current_program['start_time'].replace('Z', '+00:00'))
                     end_time = datetime.fromisoformat(current_program['end_time'].replace('Z', '+00:00'))
@@ -919,15 +919,21 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                         start_time = start_time.replace(tzinfo=None)
                     if end_time.tzinfo:
                         end_time = end_time.replace(tzinfo=None)
+
+                    # Store both UTC display (fallback) and ISO timestamps for JS conversion
                     time_str = f"{start_time.strftime('%I:%M %p')} - {end_time.strftime('%I:%M %p')}"
+                    start_iso = start_time.isoformat() + 'Z'
+                    end_iso = end_time.isoformat() + 'Z'
+                    time_data_attr = f'data-start="{start_iso}" data-end="{end_iso}"'
                 except:
                     time_str = ""
+                    time_data_attr = ""
 
                 epg_html = f"""
                     <div class="current-program">
                         <div class="program-title">{program_title}</div>
                         {f'<div class="program-subtitle">{program_subtitle}</div>' if program_subtitle else ''}
-                        {f'<div class="program-time">{time_str}</div>' if time_str else ''}
+                        {f'<div class="program-time" {time_data_attr}>{time_str}</div>' if time_str else ''}
                     </div>
                 """
 
@@ -939,7 +945,8 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                         if next_start.tzinfo:
                             next_start = next_start.replace(tzinfo=None)
                         next_time_str = next_start.strftime('%I:%M %p')
-                        epg_html += f'<div class="next-program">Up Next: {next_title} ({next_time_str})</div>'
+                        next_start_iso = next_start.isoformat() + 'Z'
+                        epg_html += f'<div class="next-program" data-start="{next_start_iso}">Up Next: {next_title} (<span class="next-time">{next_time_str}</span>)</div>'
                     except:
                         epg_html += f'<div class="next-program">Up Next: {next_title}</div>'
             else:
@@ -1781,7 +1788,52 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                 if (savedTheme === 'light') {{
                     document.body.classList.add('light-mode');
                 }}
+
+                // Convert UTC times to local timezone
+                convertTimesToLocal();
             }});
+
+            function convertTimesToLocal() {{
+                // Convert program times
+                document.querySelectorAll('.program-time[data-start]').forEach(function(elem) {{
+                    const startUTC = elem.getAttribute('data-start');
+                    const endUTC = elem.getAttribute('data-end');
+
+                    if (startUTC && endUTC) {{
+                        const startDate = new Date(startUTC);
+                        const endDate = new Date(endUTC);
+
+                        const startTime = startDate.toLocaleTimeString('en-US', {{
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                        }});
+                        const endTime = endDate.toLocaleTimeString('en-US', {{
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                        }});
+
+                        elem.textContent = startTime + ' - ' + endTime;
+                    }}
+                }});
+
+                // Convert next program times
+                document.querySelectorAll('.next-program[data-start] .next-time').forEach(function(elem) {{
+                    const parentElem = elem.closest('.next-program');
+                    const startUTC = parentElem.getAttribute('data-start');
+
+                    if (startUTC) {{
+                        const startDate = new Date(startUTC);
+                        const startTime = startDate.toLocaleTimeString('en-US', {{
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                        }});
+                        elem.textContent = startTime;
+                    }}
+                }});
+            }}
         </script>
     </body>
     </html>
@@ -1978,14 +2030,16 @@ def grid_view():
             start_hour = 0
 
     # Generate time slots (in UTC, will convert for display)
+    # Note: getTimezoneOffset() returns positive values for zones west of UTC
+    # e.g., CST (UTC-6) returns 360, so we ADD to local time to get UTC
     if selected_date:
-        # If specific date selected, adjust for timezone
-        selected_date_utc = selected_date - timedelta(minutes=tz_offset_minutes)
+        # If specific date selected, convert local time to UTC
+        selected_date_utc = selected_date + timedelta(minutes=tz_offset_minutes)
         time_slots = generate_time_slots(hours=hours, interval_minutes=30, start_date=selected_date_utc, start_hour=start_hour)
     else:
-        # For current time, adjust by timezone offset
-        now_local = datetime.utcnow() - timedelta(minutes=tz_offset_minutes)
-        time_slots = generate_time_slots(hours=hours, interval_minutes=30, start_date=now_local)
+        # For current time, convert local time to UTC
+        now_utc = datetime.utcnow()
+        time_slots = generate_time_slots(hours=hours, interval_minutes=30, start_date=now_utc)
 
     start_time = time_slots[0]
     end_time = time_slots[-1]
@@ -2009,7 +2063,9 @@ def grid_view():
     timeline_html = '<div class="timeline-header-spacer"></div>'  # Spacer for channel column
 
     for slot in time_slots:
-        time_label = slot.strftime('%I:%M %p').lstrip('0')
+        # Convert UTC time slot to local time for display
+        local_slot = slot - timedelta(minutes=tz_offset_minutes)
+        time_label = local_slot.strftime('%I:%M %p').lstrip('0')
         timeline_html += f'<div class="time-slot-header">{time_label}</div>'
 
     # Build channel rows
