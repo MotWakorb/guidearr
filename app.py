@@ -343,7 +343,7 @@ def clean_channel_name(name: str) -> str:
     return cleaned if cleaned else name
 
 
-def generate_grid_html(timeline_html: str, rows_html: str, hours: int, num_slots: int, slot_width: int, selected_date: str = '', start_hour: int = 0) -> str:
+def generate_grid_html(timeline_html: str, rows_html: str, hours: int, num_slots: int, slot_width: int, selected_date: str = '', start_hour: int = 0, channel_count: int = 0) -> str:
     """Generate the complete HTML for the grid view."""
     total_width = num_slots * slot_width
 
@@ -728,7 +728,7 @@ def generate_grid_html(timeline_html: str, rows_html: str, hours: int, num_slots
         </div>
 
         <div class="footer">
-            Last updated: {updated_str} | Showing first 100 channels
+            Last updated: {updated_str} | Showing {channel_count} channels
         </div>
 
         <script>
@@ -1997,7 +1997,7 @@ def grid_view():
     rows_html = ""
     slot_width = 200  # pixels per 30-minute slot
 
-    for channel in sorted_channels[:100]:  # Limit to first 100 channels for performance
+    for channel in sorted_channels:
         channel_number = channel.get('channel_number', 'N/A')
         if channel_number != 'N/A':
             try:
@@ -2066,7 +2066,7 @@ def grid_view():
 
     # Generate full HTML
     selected_date_str = selected_date.strftime('%Y-%m-%d') if selected_date else ''
-    grid_html = generate_grid_html(timeline_html, rows_html, hours, len(time_slots), slot_width, selected_date_str, start_hour)
+    grid_html = generate_grid_html(timeline_html, rows_html, hours, len(time_slots), slot_width, selected_date_str, start_hour, len(sorted_channels))
 
     return grid_html
 
