@@ -1562,25 +1562,43 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
             }}
 
             .print-button {{
-                position: fixed;
-                bottom: 30px;
-                right: 30px;
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 color: white;
                 border: none;
-                padding: 15px 30px;
+                padding: 10px 20px;
                 border-radius: 6px;
-                font-size: 1em;
-                font-weight: 600;
+                font-size: 0.95em;
+                font-weight: 500;
                 cursor: pointer;
-                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-                transition: transform 0.2s ease, box-shadow 0.2s ease;
-                z-index: 1000;
+                box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+                transition: all 0.2s ease;
             }}
 
             .print-button:hover {{
-                transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+                background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
+                transform: translateY(-1px);
+            }}
+
+            .grid-button {{
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 6px;
+                font-size: 0.95em;
+                font-weight: 500;
+                cursor: pointer;
+                box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+                transition: all 0.2s ease;
+                text-decoration: none;
+                display: inline-block;
+            }}
+
+            .grid-button:hover {{
+                background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
+                transform: translateY(-1px);
             }}
 
             .modal {{
@@ -1732,7 +1750,7 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                     column-gap: 10px;
                 }}
 
-                .print-button, .modal, .footer {{
+                .header-buttons, .modal, .footer {{
                     display: none !important;
                 }}
 
@@ -1901,6 +1919,8 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
             <div class="header-buttons">
                 <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark / ☀️ Light</button>
                 <button class="refresh-button" onclick="refreshCache()" id="refreshBtn">🔄 Refresh</button>
+                <a href="/grid" class="grid-button">📺 Grid View</a>
+                <button class="print-button" onclick="openPrintDialog()">📄 Printable Guide</button>
             </div>
         </div>
 
@@ -1910,10 +1930,6 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
             <p>Generated from Dispatcharr API</p>
             <p class="cache-info">Last updated: {updated_str}</p>
         </div>
-
-        <!-- View Buttons -->
-        <a href="/grid" class="grid-button" style="position: fixed; bottom: 90px; right: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 25px; border-radius: 6px; font-size: 1.1em; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3); transition: all 0.3s ease; z-index: 1000; text-decoration: none; display: inline-block;">📺 Grid View</a>
-        <button class="print-button" onclick="openPrintDialog()">📄 Printable Guide</button>
 
         <!-- Print Dialog Modal -->
         <div id="printModal" class="modal">
