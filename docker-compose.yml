@@ -1,10 +1,14 @@
 services:
   guidearr:
-    image: ghcr.io/motwakorb/guidearr:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: guidearr
     restart: unless-stopped
     ports:
       - "9198:5000"
+    env_file:
+      - .env
     environment:
       # Dispatcharr API Configuration
       - DISPATCHARR_BASE_URL=${DISPATCHARR_BASE_URL}
