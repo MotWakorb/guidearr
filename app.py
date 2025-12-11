@@ -1356,7 +1356,7 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                 border-bottom: 3px solid var(--border-color);
                 border-radius: 12px 12px 0 0;
                 position: sticky;
-                top: 0;
+                top: 160px;
                 background: var(--bg-secondary);
                 z-index: 100;
                 box-shadow: 0 2px 10px rgba(0,0,0,0.1);
@@ -1904,6 +1904,7 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
 
                 .group-title {{
                     font-size: 1.4em;
+                    top: 200px;
                 }}
 
                 .channel-logo {{
