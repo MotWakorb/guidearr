@@ -2216,6 +2216,8 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
 
 def refresh_cache():
     """Fetch data from Dispatcharr API and update the cache."""
+    from datetime import timedelta
+
     print(f"[{datetime.now()}] Starting cache refresh...")
 
     with cache['lock']:
