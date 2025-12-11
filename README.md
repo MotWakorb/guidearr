@@ -4,10 +4,14 @@ A beautiful, web-based TV channel guide generator that pulls data from your Disp
 
 ## Features
 
-- 🎨 **Dark/Light Mode**: Toggle between dark and light themes with persistent preference
+- 📺 **EPG Data Support**: Displays "Now Playing" and "Up Next" program information for channels with EPG data
+- 🗓️ **Grid View**: Interactive timeline view with scrollable program schedule
+- 🎨 **Dark/Light Mode**: Toggle between dark and light themes with persistent preference (available in both views)
+- 🔄 **Manual Refresh**: Refresh button in header to manually update cache with latest data
 - 📄 **Dual Print Modes**: Choose between detailed (all channels) or summary (channel ranges) per group
+- 📝 **Channel Range Override**: Manually specify channel ranges for groups with non-contiguous channels in print dialog
 - 🖨️ **Auto-Print Dialog**: Automatically opens print dialog when generating printable guides
-- 🔄 **Smart Caching**: Configurable refresh schedule to minimize API calls
+- ⏰ **Smart Caching**: Configurable refresh schedule to minimize API calls
 - 🎯 **Flexible Filtering**: Select which channel groups to include and exclude
 - 🌈 **Continuation Headers**: Automatic headers when groups span across columns
 - 🏃 **Multi-Architecture**: Supports both AMD64 and ARM64 platforms
@@ -121,26 +125,42 @@ docker-compose up -d
 
 ## Using the Application
 
-### Main Guide Interface
+### List View (Main Interface)
 
-- **View Channels**: Browse all your channels organized by groups
-- **Theme Toggle**: Click the "🌙 Dark / ☀️ Light" button in the top-right to switch themes
+- **View Channels**: Browse all your channels organized by groups with EPG data
+- **Theme Toggle**: Click the "🌙 Dark / ☀️ Light" button in the header to switch themes
+- **Refresh Cache**: Click "🔄 Refresh" to manually update data from Dispatcharr
+- **Grid View**: Click "📺 Grid View" to switch to timeline view
 - **Printable Guide**: Click "📄 Printable Guide" to select which groups to print
+- **EPG Information**: See current and upcoming programs for channels with EPG data
+
+### Grid View
+
+- **Timeline Display**: Scrollable horizontal timeline showing programs by time
+- **Date & Time Selection**: Choose date and start time from dropdown menus
+- **Auto-scroll**: Automatically scrolls to current time on page load
+- **Theme Toggle**: Switch between dark and light modes
+- **Refresh Cache**: Update data without reloading
+- **List View**: Click "📋 List View" to return to the main interface
 
 ### Creating Printable Guides
 
 1. Click the "📄 Printable Guide" button
 2. Select which channel groups to include
 3. Choose "Detailed" (all channels) or "Summary" (channel range) for each group
-4. Click "Print Selected"
-5. The print dialog will automatically open in a new window
-6. Print or save as PDF
+4. **Optional**: For summary mode, enter a custom channel range (e.g., "200-220") to override automatic range calculation
+   - Useful for channel groups with gaps/non-contiguous channels
+   - Automatically calculates channel count from the specified range
+5. Click "Print Selected"
+6. The print dialog will automatically open in a new window
+7. Print or save as PDF
 
 ### Available Endpoints
 
-- **Main page**: `http://localhost:9198`
+- **List View**: `http://localhost:9198`
+- **Grid View**: `http://localhost:9198/grid`
 - **Health check**: `http://localhost:9198/health`
-- **Manual refresh**: `http://localhost:9198/refresh` (forces immediate cache refresh)
+- **Manual refresh**: `http://localhost:9198/refresh` (forces immediate cache refresh via API)
 
 ## How Caching Works
 
@@ -149,7 +169,7 @@ The application uses smart caching to provide instant page loads:
 1. **Startup**: When the container starts, it immediately fetches all data from Dispatcharr (channels, groups, logos) and generates the HTML
 2. **Fast Serving**: All subsequent page loads are served instantly from the cache
 3. **Scheduled Refresh**: The cache automatically refreshes based on your `CACHE_REFRESH_CRON` setting (default: every 6 hours)
-4. **Manual Refresh**: Visit `/refresh` to force an immediate cache update
+4. **Manual Refresh**: Click the "🔄 Refresh" button in the header or visit `/refresh` endpoint to force an immediate cache update
 
 The health endpoint (`/health`) shows:
 - Whether the cache is populated
