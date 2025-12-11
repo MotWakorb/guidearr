@@ -1298,7 +1298,7 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
             .header {{
                 position: sticky;
                 top: 0;
-                z-index: 100;
+                z-index: 1000;
                 margin-bottom: 40px;
                 padding: 30px;
                 background: var(--accent-gradient-1);
