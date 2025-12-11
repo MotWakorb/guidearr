@@ -9,7 +9,7 @@ import re
 import requests
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, render_template_string, jsonify
 from typing import Dict, List, Optional, Tuple
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -488,6 +488,19 @@ def generate_grid_html(timeline_html: str, rows_html: str, hours: int, num_slots
                 height: 100vh;
             }}
 
+            body.light-mode {{
+                --bg-primary: #f5f5f5;
+                --bg-secondary: #ffffff;
+                --bg-tertiary: #e0e0e0;
+                --text-primary: #212121;
+                --text-secondary: #424242;
+                --border-color: #e0e0e0;
+                --channel-bg: #fafafa;
+                --program-bg: #e3f2fd;
+                --program-hover: #bbdefb;
+                --timeline-bg: #ffffff;
+            }}
+
             .header {{
                 background: var(--bg-secondary);
                 padding: 15px 20px;
@@ -516,6 +529,50 @@ def generate_grid_html(timeline_html: str, rows_html: str, hours: int, num_slots
 
             .view-toggle:hover {{
                 background: #5568d3;
+            }}
+
+            .theme-toggle {{
+                background: var(--bg-secondary);
+                border: 2px solid var(--border-color);
+                color: var(--text-primary);
+                padding: 10px 20px;
+                border-radius: 6px;
+                font-size: 0.9em;
+                font-weight: 600;
+                cursor: pointer;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                transition: all 0.3s ease;
+                white-space: nowrap;
+            }}
+
+            .theme-toggle:hover {{
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            }}
+
+            .refresh-button {{
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 6px;
+                font-size: 0.9em;
+                font-weight: 600;
+                cursor: pointer;
+                box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+                transition: all 0.3s ease;
+                white-space: nowrap;
+            }}
+
+            .refresh-button:hover {{
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(16, 185, 129, 0.5);
+            }}
+
+            .refresh-button:disabled {{
+                background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+                cursor: not-allowed;
+                opacity: 0.6;
             }}
 
             .date-selector {{
@@ -775,7 +832,11 @@ def generate_grid_html(timeline_html: str, rows_html: str, hours: int, num_slots
                 </select>
                 <button onclick="updateGrid()">Update</button>
             </div>
-            <a href="/" class="view-toggle">📋 List View</a>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark / ☀️ Light</button>
+                <button class="refresh-button" onclick="refreshCache()" id="refreshBtn">🔄 Refresh</button>
+                <a href="/" class="view-toggle">📋 List View</a>
+            </div>
         </div>
 
         <div class="grid-container">
@@ -885,6 +946,71 @@ def generate_grid_html(timeline_html: str, rows_html: str, hours: int, num_slots
                     gridContent.scrollLeft = Math.max(0, scrollPosition - centerOffset);
                 }}
             }});
+
+            // Theme toggle function
+            function toggleTheme() {{
+                document.body.classList.toggle('light-mode');
+                // Save theme preference to localStorage
+                if (document.body.classList.contains('light-mode')) {{
+                    localStorage.setItem('theme', 'light');
+                }} else {{
+                    localStorage.setItem('theme', 'dark');
+                }}
+            }}
+
+            // Refresh cache function
+            async function refreshCache() {{
+                const btn = document.getElementById('refreshBtn');
+                const originalText = btn.innerHTML;
+
+                // Disable button and show loading state
+                btn.disabled = true;
+                btn.innerHTML = '⏳ Refreshing...';
+
+                try {{
+                    const response = await fetch('/refresh');
+                    const data = await response.json();
+
+                    if (response.ok) {{
+                        // Show success message
+                        btn.innerHTML = '✓ Refreshed!';
+                        btn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+
+                        // Reload the page after a short delay
+                        setTimeout(() => {{
+                            window.location.reload();
+                        }}, 1000);
+                    }} else {{
+                        // Show error message
+                        btn.innerHTML = '✗ Error';
+                        btn.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+
+                        // Reset button after 2 seconds
+                        setTimeout(() => {{
+                            btn.innerHTML = originalText;
+                            btn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                            btn.disabled = false;
+                        }}, 2000);
+                    }}
+                }} catch (error) {{
+                    // Show error message
+                    btn.innerHTML = '✗ Error';
+                    btn.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+
+                    // Reset button after 2 seconds
+                    setTimeout(() => {{
+                        btn.innerHTML = originalText;
+                        btn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                        btn.disabled = false;
+                    }}, 2000);
+                }}
+            }}
+
+            // Load saved theme preference on page load
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'light') {{
+                document.body.classList.add('light-mode');
+            }}
         </script>
     </body>
     </html>
@@ -1170,13 +1296,22 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
             }}
 
             .header {{
-                text-align: center;
                 margin-bottom: 40px;
                 padding: 30px;
                 background: var(--accent-gradient-1);
                 border-radius: 12px;
                 box-shadow: 0 10px 30px rgba(0,0,0,0.2);
                 transition: background 0.3s ease;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 15px;
+            }}
+
+            .header-content {{
+                text-align: center;
+                flex: 1;
             }}
 
             .header h1 {{
@@ -1191,6 +1326,12 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                 font-size: 1.1em;
                 color: var(--text-secondary);
                 font-weight: 300;
+            }}
+
+            .header-buttons {{
+                display: flex;
+                gap: 10px;
+                align-items: center;
             }}
 
             .channel-group {{
@@ -1377,25 +1518,47 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
             }}
 
             .theme-toggle {{
-                position: fixed;
-                top: 20px;
-                right: 20px;
                 background: var(--bg-secondary);
                 border: 2px solid var(--border-color);
                 color: var(--text-primary);
                 padding: 10px 20px;
-                border-radius: 50px;
-                font-size: 1em;
+                border-radius: 6px;
+                font-size: 0.9em;
                 font-weight: 600;
                 cursor: pointer;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
                 transition: all 0.3s ease;
-                z-index: 1001;
+                white-space: nowrap;
             }}
 
             .theme-toggle:hover {{
                 transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            }}
+
+            .refresh-button {{
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 6px;
+                font-size: 0.9em;
+                font-weight: 600;
+                cursor: pointer;
+                box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+                transition: all 0.3s ease;
+                white-space: nowrap;
+            }}
+
+            .refresh-button:hover {{
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(16, 185, 129, 0.5);
+            }}
+
+            .refresh-button:disabled {{
+                background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+                cursor: not-allowed;
+                opacity: 0.6;
             }}
 
             .print-button {{
@@ -1406,7 +1569,7 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                 color: white;
                 border: none;
                 padding: 15px 30px;
-                border-radius: 50px;
+                border-radius: 6px;
                 font-size: 1em;
                 font-weight: 600;
                 cursor: pointer;
@@ -1701,8 +1864,21 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
             }}
 
             @media (max-width: 768px) {{
+                .header {{
+                    flex-direction: column;
+                    text-align: center;
+                }}
+
+                .header-content {{
+                    margin-bottom: 15px;
+                }}
+
                 .header h1 {{
                     font-size: 1.8em;
+                }}
+
+                .header-buttons {{
+                    justify-content: center;
                 }}
 
                 .group-title {{
@@ -1717,12 +1893,15 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
         </style>
     </head>
     <body>
-        <!-- Theme Toggle Button -->
-        <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark / ☀️ Light</button>
-
         <div class="header">
-            <h1>{PAGE_TITLE}</h1>
-            <p class="channel-count">{len(sorted_channels)} channels available</p>
+            <div class="header-content">
+                <h1>{PAGE_TITLE}</h1>
+                <p class="channel-count">{len(sorted_channels)} channels available</p>
+            </div>
+            <div class="header-buttons">
+                <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark / ☀️ Light</button>
+                <button class="refresh-button" onclick="refreshCache()" id="refreshBtn">🔄 Refresh</button>
+            </div>
         </div>
 
         {groups_html}
@@ -1733,7 +1912,7 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
         </div>
 
         <!-- View Buttons -->
-        <a href="/grid" class="grid-button" style="position: fixed; bottom: 90px; right: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 25px; border-radius: 50px; font-size: 1.1em; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3); transition: all 0.3s ease; z-index: 1000; text-decoration: none; display: inline-block;">📺 Grid View</a>
+        <a href="/grid" class="grid-button" style="position: fixed; bottom: 90px; right: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 25px; border-radius: 6px; font-size: 1.1em; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3); transition: all 0.3s ease; z-index: 1000; text-decoration: none; display: inline-block;">📺 Grid View</a>
         <button class="print-button" onclick="openPrintDialog()">📄 Printable Guide</button>
 
         <!-- Print Dialog Modal -->
@@ -1757,10 +1936,12 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
             const allGroups = [{groups_json}];
             let selectedGroups = new Set(allGroups);
             let groupModes = {{}};  // Track detailed/summary per group
+            let groupRangeOverrides = {{}};  // Track custom channel ranges per group
 
             // Initialize all groups to 'detailed' mode by default
             allGroups.forEach(group => {{
                 groupModes[group] = 'detailed';
+                groupRangeOverrides[group] = '';
             }});
 
             // Initialize checkboxes with format selectors
@@ -1773,7 +1954,7 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
 
                     const div = document.createElement('div');
                     div.className = 'group-checkbox';
-                    div.style.cssText = 'display: flex; align-items: center; padding: 8px; border-bottom: 1px solid #ddd;';
+                    div.style.cssText = 'display: flex; align-items: center; padding: 8px; border-bottom: 1px solid #ddd; flex-wrap: wrap; gap: 8px;';
 
                     const checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
@@ -1831,9 +2012,21 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                     formatDiv.appendChild(detailedBtn);
                     formatDiv.appendChild(summaryBtn);
 
+                    // Channel range override input
+                    const rangeInput = document.createElement('input');
+                    rangeInput.type = 'text';
+                    rangeInput.placeholder = 'Range (e.g., 100-150)';
+                    rangeInput.style.cssText = 'margin-left: 10px; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 11px; width: 120px;';
+                    rangeInput.value = groupRangeOverrides[group] || '';
+                    rangeInput.oninput = function(e) {{
+                        e.stopPropagation();
+                        groupRangeOverrides[group] = this.value.trim();
+                    }};
+
                     div.appendChild(checkbox);
                     div.appendChild(label);
                     div.appendChild(formatDiv);
+                    div.appendChild(rangeInput);
 
                     container.appendChild(div);
                 }});
@@ -1877,8 +2070,17 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                     return `${{encodeURIComponent(group)}}:${{mode}}`;
                 }}).join(',');
 
+                // Build range overrides parameter (group:range,group:range,...)
+                const rangeOverrides = includedGroups
+                    .filter(group => groupRangeOverrides[group] && groupRangeOverrides[group].length > 0)
+                    .map(group => `${{encodeURIComponent(group)}}:${{encodeURIComponent(groupRangeOverrides[group])}}`)
+                    .join(',');
+
                 // Open print page in new window
-                const printUrl = `/print?modes=${{modesParam}}`;
+                let printUrl = `/print?modes=${{modesParam}}`;
+                if (rangeOverrides) {{
+                    printUrl += `&ranges=${{rangeOverrides}}`;
+                }}
                 window.open(printUrl, '_blank');
 
                 // Close modal
@@ -1901,6 +2103,54 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                     localStorage.setItem('theme', 'light');
                 }} else {{
                     localStorage.setItem('theme', 'dark');
+                }}
+            }}
+
+            // Refresh cache function
+            async function refreshCache() {{
+                const btn = document.getElementById('refreshBtn');
+                const originalText = btn.innerHTML;
+
+                // Disable button and show loading state
+                btn.disabled = true;
+                btn.innerHTML = '⏳ Refreshing...';
+
+                try {{
+                    const response = await fetch('/refresh');
+                    const data = await response.json();
+
+                    if (response.ok) {{
+                        // Show success message
+                        btn.innerHTML = '✓ Refreshed!';
+                        btn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+
+                        // Reload the page after a short delay
+                        setTimeout(() => {{
+                            window.location.reload();
+                        }}, 1000);
+                    }} else {{
+                        // Show error message
+                        btn.innerHTML = '✗ Error';
+                        btn.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+
+                        // Reset button after 2 seconds
+                        setTimeout(() => {{
+                            btn.innerHTML = originalText;
+                            btn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                            btn.disabled = false;
+                        }}, 2000);
+                    }}
+                }} catch (error) {{
+                    // Show error message
+                    btn.innerHTML = '✗ Error';
+                    btn.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+
+                    // Reset button after 2 seconds
+                    setTimeout(() => {{
+                        btn.innerHTML = originalText;
+                        btn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                        btn.disabled = false;
+                    }}, 2000);
                 }}
             }}
 
@@ -2339,6 +2589,17 @@ def print_guide():
                 from urllib.parse import unquote
                 group_modes[unquote(group_name)] = mode
 
+    # Get per-group range overrides from query parameter (format: "group1:100-150,group2:200-250,...")
+    ranges_param = request.args.get('ranges', '')
+    group_range_overrides = {}  # Map of group_name -> custom range string
+
+    if ranges_param:
+        for item in ranges_param.split(','):
+            if ':' in item:
+                group_name, range_value = item.rsplit(':', 1)
+                from urllib.parse import unquote
+                group_range_overrides[unquote(group_name)] = unquote(range_value)
+
     try:
         # Get data from cache
         if cache['channels'] is None or cache['groups_map'] is None:
@@ -2403,23 +2664,49 @@ def print_guide():
 
             if mode == 'summary':
                 # Summary mode for this group: show header with channel range
-                first_ch = group_channels[0].get('channel_number', 'N/A')
-                last_ch = group_channels[-1].get('channel_number', 'N/A')
+                # Check if there's a custom range override for this group
+                if group_name in group_range_overrides and group_range_overrides[group_name]:
+                    range_text = group_range_overrides[group_name]
 
-                # Format numbers
-                def format_number(raw):
-                    if raw != 'N/A':
-                        try:
-                            float_num = float(raw)
-                            return str(int(float_num)) if float_num == int(float_num) else str(float_num)
-                        except:
-                            return str(raw)
-                    return 'N/A'
+                    # Calculate channel count from the range override
+                    # Parse formats like "100-150" or "200-220"
+                    try:
+                        if '-' in range_text:
+                            parts = range_text.split('-')
+                            if len(parts) == 2:
+                                start = float(parts[0].strip())
+                                end = float(parts[1].strip())
+                                channel_count = int(end - start + 1)
+                            else:
+                                # Invalid format, fall back to actual count
+                                channel_count = len(group_channels)
+                        else:
+                            # Single channel number
+                            channel_count = 1
+                    except (ValueError, IndexError):
+                        # Invalid format, fall back to actual count
+                        channel_count = len(group_channels)
+                else:
+                    # Use automatic range from first/last channel
+                    first_ch = group_channels[0].get('channel_number', 'N/A')
+                    last_ch = group_channels[-1].get('channel_number', 'N/A')
 
-                first_num = format_number(first_ch)
-                last_num = format_number(last_ch)
-                range_text = f"{first_num} - {last_num}" if first_num != last_num else first_num
-                channel_count = len(group_channels)
+                    # Format numbers
+                    def format_number(raw):
+                        if raw != 'N/A':
+                            try:
+                                float_num = float(raw)
+                                return str(int(float_num)) if float_num == int(float_num) else str(float_num)
+                            except:
+                                return str(raw)
+                        return 'N/A'
+
+                    first_num = format_number(first_ch)
+                    last_num = format_number(last_ch)
+                    range_text = f"{first_num} - {last_num}" if first_num != last_num else first_num
+
+                    # Use actual channel count when auto-calculating
+                    channel_count = len(group_channels)
 
                 groups_html += f"""        <div class="channel-group summary-mode" data-group="{group_name}" style="background: {bg_color};">
             <div class="group-title" style="background: {header_color}; color: #fff;">{group_name}</div>
