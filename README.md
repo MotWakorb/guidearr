@@ -5,7 +5,9 @@ A beautiful, web-based TV channel guide generator that pulls data from your Disp
 ## Features
 
 - 📺 **EPG Data Support**: Displays "Now Playing" and "Up Next" program information for channels with EPG data
-- 🗓️ **Grid View**: Interactive timeline view with scrollable program schedule
+- 📊 **Live Progress Bars**: Real-time visual indicators showing how far through current programs (auto-updates every second)
+- 📌 **Sticky Headers**: Main header and channel group titles stay visible while scrolling for better navigation
+- 🗓️ **Grid View**: Interactive timeline view with scrollable program schedule and hover tooltips for channel names
 - 🎨 **Dark/Light Mode**: Toggle between dark and light themes with persistent preference (available in both views)
 - 🔄 **Manual Refresh**: Refresh button in header to manually update cache with latest data
 - 📄 **Dual Print Modes**: Choose between detailed (all channels) or summary (channel ranges) per group
@@ -128,6 +130,8 @@ docker-compose up -d
 ### List View (Main Interface)
 
 - **View Channels**: Browse all your channels organized by groups with EPG data
+- **Live Progress Bars**: Watch real-time progress indicators showing how far through each program (updates every second)
+- **Sticky Headers**: Main header and channel group titles remain visible as you scroll for easy navigation
 - **Theme Toggle**: Click the "🌙 Dark / ☀️ Light" button in the header to switch themes
 - **Refresh Cache**: Click "🔄 Refresh" to manually update data from Dispatcharr
 - **Grid View**: Click "📺 Grid View" to switch to timeline view
@@ -137,6 +141,7 @@ docker-compose up -d
 ### Grid View
 
 - **Timeline Display**: Scrollable horizontal timeline showing programs by time
+- **Channel Name Tooltips**: Hover over truncated channel names to see the full name
 - **Date & Time Selection**: Choose date and start time from dropdown menus
 - **Auto-scroll**: Automatically scrolls to current time on page load
 - **Theme Toggle**: Switch between dark and light modes
