@@ -1302,7 +1302,7 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                 margin-bottom: 40px;
                 padding: 30px;
                 background: var(--accent-gradient-1);
-                border-radius: 12px;
+                border-radius: 0;
                 box-shadow: 0 10px 30px rgba(0,0,0,0.2);
                 transition: background 0.3s ease;
                 display: flex;
