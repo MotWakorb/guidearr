@@ -2651,7 +2651,7 @@ def grid_view():
                 <div class="channel-info">
                     <div class="channel-num">{channel_number}</div>
                     {logo_html}
-                    <div class="channel-name-grid">{channel_name}</div>
+                    <div class="channel-name-grid" title="{channel_name}">{channel_name}</div>
                 </div>
                 <div class="program-timeline">
                     {program_blocks}
