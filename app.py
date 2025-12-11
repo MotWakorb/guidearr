@@ -1523,9 +1523,17 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
 
             .progress-bar-fill {{
                 height: 100%;
-                background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+                background: linear-gradient(90deg, #8b9cff 0%, #9d7bc5 100%);
                 border-radius: 3px;
                 transition: width 1s linear;
+            }}
+
+            body.light-mode .progress-bar-container {{
+                background: rgba(102, 126, 234, 0.15);
+            }}
+
+            body.light-mode .progress-bar-fill {{
+                background: linear-gradient(90deg, #4c5ec0 0%, #5a3a80 100%);
             }}
 
             .next-program {{
