@@ -1400,7 +1400,7 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
             }}
 
             .channels-table thead th:nth-child(3) {{
-                width: 200px;
+                width: 300px;
             }}
 
             body.light-mode .channels-table thead th {{
@@ -1421,7 +1421,7 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
             }}
 
             .channels-table td {{
-                padding: 15px;
+                padding: 10px 15px;
                 vertical-align: middle;
             }}
 
