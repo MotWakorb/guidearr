@@ -1160,6 +1160,7 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                 program_subtitle = current_program.get('sub_title', '')
 
                 # Format time - store UTC timestamps for JavaScript conversion
+                progress_bar_html = ""
                 try:
                     start_time = datetime.fromisoformat(current_program['start_time'].replace('Z', '+00:00'))
                     end_time = datetime.fromisoformat(current_program['end_time'].replace('Z', '+00:00'))
@@ -1168,20 +1169,31 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                     if end_time.tzinfo:
                         end_time = end_time.replace(tzinfo=None)
 
+                    # Calculate progress percentage
+                    now = datetime.utcnow()
+                    total_duration = (end_time - start_time).total_seconds()
+                    elapsed = (now - start_time).total_seconds()
+                    progress_percent = max(0, min(100, (elapsed / total_duration * 100))) if total_duration > 0 else 0
+
                     # Store both UTC display (fallback) and ISO timestamps for JS conversion
                     time_str = f"{start_time.strftime('%I:%M %p')} - {end_time.strftime('%I:%M %p')}"
                     start_iso = start_time.isoformat() + 'Z'
                     end_iso = end_time.isoformat() + 'Z'
                     time_data_attr = f'data-start="{start_iso}" data-end="{end_iso}"'
+
+                    # Create progress bar HTML with data attributes for live updating
+                    progress_bar_html = f'<div class="progress-bar-container" {time_data_attr}><div class="progress-bar-fill" style="width: {progress_percent:.1f}%"></div></div>'
                 except:
                     time_str = ""
                     time_data_attr = ""
+                    progress_bar_html = ""
 
                 epg_html = f"""
                     <div class="current-program">
                         <div class="program-title">{program_title}</div>
                         {f'<div class="program-subtitle">{program_subtitle}</div>' if program_subtitle else ''}
                         {f'<div class="program-time" {time_data_attr}>{time_str}</div>' if time_str else ''}
+                        {progress_bar_html}
                     </div>
                 """
 
@@ -1497,6 +1509,23 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                 color: #667eea;
                 font-weight: 500;
                 margin-top: 4px;
+            }}
+
+            .progress-bar-container {{
+                width: 100%;
+                height: 6px;
+                background: rgba(102, 126, 234, 0.2);
+                border-radius: 3px;
+                overflow: hidden;
+                margin-top: 8px;
+                margin-bottom: 8px;
+            }}
+
+            .progress-bar-fill {{
+                height: 100%;
+                background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+                border-radius: 3px;
+                transition: width 1s linear;
             }}
 
             .next-program {{
@@ -2180,6 +2209,33 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                     }}, 2000);
                 }}
             }}
+
+            // Update progress bars
+            function updateProgressBars() {{
+                const containers = document.querySelectorAll('.progress-bar-container');
+                const now = new Date();
+
+                containers.forEach(container => {{
+                    const startStr = container.getAttribute('data-start');
+                    const endStr = container.getAttribute('data-end');
+
+                    if (startStr && endStr) {{
+                        const start = new Date(startStr);
+                        const end = new Date(endStr);
+                        const totalDuration = end - start;
+                        const elapsed = now - start;
+                        const progress = Math.max(0, Math.min(100, (elapsed / totalDuration) * 100));
+
+                        const fillElement = container.querySelector('.progress-bar-fill');
+                        if (fillElement) {{
+                            fillElement.style.width = progress.toFixed(1) + '%';
+                        }}
+                    }}
+                }});
+            }}
+
+            // Update progress bars every second
+            setInterval(updateProgressBars, 1000);
 
             // Load saved theme preference on page load
             window.addEventListener('DOMContentLoaded', function() {{
