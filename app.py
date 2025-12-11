@@ -1354,7 +1354,7 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                 margin: 0;
                 padding: 15px 30px;
                 border-bottom: 3px solid var(--border-color);
-                border-radius: 12px 12px 0 0;
+                border-radius: 0;
                 position: sticky;
                 top: 145px;
                 background: var(--bg-secondary);
