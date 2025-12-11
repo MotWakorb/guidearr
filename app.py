@@ -1399,6 +1399,10 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                 width: 120px;
             }}
 
+            .channels-table thead th:nth-child(3) {{
+                width: 200px;
+            }}
+
             body.light-mode .channels-table thead th {{
                 background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
             }}
@@ -1459,6 +1463,9 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                 font-size: 1.05em;
                 color: var(--text-primary);
                 font-weight: 500;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
             }}
 
             .epg-info {{
