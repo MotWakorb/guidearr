@@ -1,7 +1,7 @@
 # Multi-stage build for Dispatcharr Channel Guide
 
 # Stage 1: Python application
-FROM python:3.11-slim as python-app
+FROM python:3.14-slim as python-app
 
 WORKDIR /app
 
