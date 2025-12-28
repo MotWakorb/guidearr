@@ -22,6 +22,9 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository_owner }}/guidearr
 
+# Restrict default permissions - each job specifies what it needs
+permissions: {}
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest

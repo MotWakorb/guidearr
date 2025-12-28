@@ -49,7 +49,7 @@ def get_access_token() -> str:
         'password': DISPATCHARR_PASSWORD
     }
 
-    response = requests.post(token_url, json=payload)
+    response = requests.post(token_url, json=payload, timeout=30)
     response.raise_for_status()
 
     data = response.json()
@@ -69,7 +69,7 @@ def get_channel_groups(access_token: str) -> Dict[int, str]:
         'Accept': 'application/json'
     }
 
-    response = requests.get(groups_url, headers=headers)
+    response = requests.get(groups_url, headers=headers, timeout=30)
     response.raise_for_status()
 
     groups = response.json()
@@ -95,7 +95,7 @@ def get_logos(access_token: str) -> Dict[int, dict]:
 
     all_logos = []
 
-    response = requests.get(logos_url, headers=headers)
+    response = requests.get(logos_url, headers=headers, timeout=30)
     response.raise_for_status()
 
     data = response.json()
@@ -114,7 +114,7 @@ def get_logos(access_token: str) -> Dict[int, dict]:
             else:
                 full_url = f"{base_url}/{next_url.lstrip('/')}"
 
-            response = requests.get(full_url, headers=headers)
+            response = requests.get(full_url, headers=headers, timeout=30)
             response.raise_for_status()
 
             page_data = response.json()
@@ -145,7 +145,7 @@ def get_channels(access_token: str, page_size: int = 100) -> List[dict]:
         'Accept': 'application/json'
     }
 
-    response = requests.get(channels_url, headers=headers)
+    response = requests.get(channels_url, headers=headers, timeout=30)
     response.raise_for_status()
 
     data = response.json()
@@ -164,7 +164,7 @@ def get_channels(access_token: str, page_size: int = 100) -> List[dict]:
             else:
                 full_url = f"{base_url}/{next_url.lstrip('/')}"
 
-            response = requests.get(full_url, headers=headers)
+            response = requests.get(full_url, headers=headers, timeout=30)
             response.raise_for_status()
 
             page_data = response.json()
@@ -269,7 +269,7 @@ def get_epg_grid(access_token: str) -> List[dict]:
         'Accept': 'application/json'
     }
 
-    response = requests.get(epg_grid_url, headers=headers)
+    response = requests.get(epg_grid_url, headers=headers, timeout=30)
     response.raise_for_status()
 
     programs = response.json()
@@ -298,7 +298,7 @@ def get_channel_profile_by_name(access_token: str, profile_name: str) -> Optiona
         'Accept': 'application/json'
     }
 
-    response = requests.get(profiles_url, headers=headers)
+    response = requests.get(profiles_url, headers=headers, timeout=30)
     response.raise_for_status()
 
     profiles = response.json()
@@ -1183,7 +1183,7 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
 
                     # Create progress bar HTML with data attributes for live updating
                     progress_bar_html = f'<div class="progress-bar-container" {time_data_attr}><div class="progress-bar-fill" style="width: {progress_percent:.1f}%"></div></div>'
-                except:
+                except (ValueError, TypeError, KeyError):
                     time_str = ""
                     time_data_attr = ""
                     progress_bar_html = ""
@@ -1207,7 +1207,7 @@ def generate_html(channels: List[dict], groups_map: Dict[int, str], logos_map: D
                         next_time_str = next_start.strftime('%I:%M %p')
                         next_start_iso = next_start.isoformat() + 'Z'
                         epg_html += f'<div class="next-program" data-start="{next_start_iso}">Up Next: {next_title} (<span class="next-time">{next_time_str}</span>)</div>'
-                    except:
+                    except (ValueError, TypeError, KeyError):
                         epg_html += f'<div class="next-program">Up Next: {next_title}</div>'
             else:
                 epg_html = '<div class="no-epg">No program information available</div>'
@@ -2598,8 +2598,8 @@ def grid_view():
             try:
                 float_num = float(channel_number)
                 channel_number = str(int(float_num)) if float_num == int(float_num) else str(float_num)
-            except:
-                pass
+            except (ValueError, TypeError):
+                pass  # Keep original channel_number if conversion fails
 
         channel_name = clean_channel_name(channel.get('name', 'Unknown'))
 
@@ -2790,7 +2790,7 @@ def print_guide():
                             try:
                                 float_num = float(raw)
                                 return str(int(float_num)) if float_num == int(float_num) else str(float_num)
-                            except:
+                            except (ValueError, TypeError):
                                 return str(raw)
                         return 'N/A'
 
@@ -2824,7 +2824,7 @@ def print_guide():
                                 number = str(int(float_num))
                             else:
                                 number = str(float_num)
-                        except:
+                        except (ValueError, TypeError):
                             number = str(raw_number)
                     else:
                         number = 'N/A'
