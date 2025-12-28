@@ -7,6 +7,7 @@ WORKDIR /app
 
 # Install dependencies and curl for healthcheck
 COPY requirements.txt .
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/* \
     && pip install --no-cache-dir -r requirements.txt
