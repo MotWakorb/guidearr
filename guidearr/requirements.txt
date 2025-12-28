@@ -1,4 +1,4 @@
-Flask==3.0.0
-requests==2.31.0
+Flask==3.1.2
+requests==2.32.5
 gunicorn==21.2.0
-APScheduler==3.10.4
+APScheduler==3.11.2
